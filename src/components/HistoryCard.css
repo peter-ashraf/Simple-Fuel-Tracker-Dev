@@ -1,0 +1,102 @@
+/* Hide scrollbars for all browsers */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+.scrollbar-none::-webkit-scrollbar-track {
+  display: none;
+}
+
+.scrollbar-none::-webkit-scrollbar-thumb {
+  display: none;
+}
+
+.history-card {
+  background-color: transparent;
+  width: 100%;
+  font-family: sans-serif;
+  position: relative;
+  margin-bottom: 1rem;
+  z-index: 1;
+  overflow: visible; /* Ensure card can expand if needed */
+}
+
+.flip-card {
+  background-color: transparent;
+  width: 100%;
+  font-family: sans-serif;
+  position: relative;
+  min-height: 200px;
+  overflow: visible;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  text-align: left;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+.flip-card.flipped {
+  z-index: 100;
+  overflow: visible; /* Ensure back face is fully visible */
+}
+
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+  color-scheme: light;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 200px;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 1.25rem;
+  overflow: visible;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .flip-card-front,
+  .flip-card-back {
+    padding: 1rem;
+  }
+}
+
+/* Dark mode specific styles */
+.dark .flip-card-front,
+.dark .flip-card-back {
+  color-scheme: dark;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .flip-card-front [role="button"]:focus,
+.dark .flip-card-back button:focus {
+  outline-color: #34d399;
+}
