@@ -1,4 +1,14 @@
 import { supabase } from '../lib/supabaseClient';
+import { CLOUD_CONFIGURED, DEV_USER_EMAIL, DEV_USER_ID } from '../config/appConfig';
+
+const devSession = {
+  user: {
+    id: DEV_USER_ID,
+    email: DEV_USER_EMAIL,
+    app_metadata: {},
+    user_metadata: { username: 'dev-local' }
+  }
+};
 
 export const authService = {
   normalizeUsername(username) {
@@ -40,6 +50,11 @@ export const authService = {
    * @returns {Promise<Object>} User data or error
    */
   async signIn(identifier, password, rememberMe = true) {
+    if (!CLOUD_CONFIGURED) {
+      localStorage.setItem('fueltracker-remember-me', rememberMe ? 'true' : 'false');
+      return { session: devSession, user: devSession.user };
+    }
+
     const email = await this.resolveLoginIdentifier(identifier);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -62,6 +77,11 @@ export const authService = {
    * @returns {Promise<Object>} User data or error
    */
   async signUp(username, email, password) {
+    if (!CLOUD_CONFIGURED) {
+      localStorage.setItem('fueltracker-remember-me', 'true');
+      return { session: devSession, user: { ...devSession.user, email: email || DEV_USER_EMAIL } };
+    }
+
     const normalizedUsername = this.normalizeUsername(username);
     if (!/^[a-z0-9_]{3,24}$/.test(normalizedUsername)) {
       throw new Error('Username must be 3-24 characters and use only letters, numbers, or underscores.');
@@ -82,6 +102,14 @@ export const authService = {
   },
 
   async getProfile() {
+    if (!CLOUD_CONFIGURED) {
+      return {
+        id: DEV_USER_ID,
+        username: 'dev-local',
+        email: DEV_USER_EMAIL,
+      };
+    }
+
     const user = await this.getUser();
     if (!user) return null;
 
@@ -100,6 +128,14 @@ export const authService = {
   },
 
   async upsertProfile(userId, username, email) {
+    if (!CLOUD_CONFIGURED) {
+      return {
+        id: userId || DEV_USER_ID,
+        username: this.normalizeUsername(username || 'dev-local'),
+        email: email || DEV_USER_EMAIL,
+      };
+    }
+
     const normalizedUsername = this.normalizeUsername(username);
     const { data, error } = await supabase
       .from('profiles')
@@ -123,6 +159,8 @@ export const authService = {
   },
 
   async updatePassword(oldPassword, newPassword) {
+    if (!CLOUD_CONFIGURED) return { user: devSession.user };
+
     await this.verifyCurrentPassword(oldPassword);
 
     // Old password verified, now update to new password
@@ -132,6 +170,8 @@ export const authService = {
   },
 
   async verifyCurrentPassword(password) {
+    if (!CLOUD_CONFIGURED) return true;
+
     const user = await this.getUser();
     if (!user?.email) throw new Error('You must be logged in.');
 
@@ -145,6 +185,10 @@ export const authService = {
   },
 
   async sendPasswordReset(identifier) {
+    if (!CLOUD_CONFIGURED) {
+      throw new Error('Password reset is unavailable while cloud is disabled in the dev build.');
+    }
+
     const email = await this.resolveLoginIdentifier(identifier);
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin,
@@ -158,6 +202,8 @@ export const authService = {
    * @returns {Promise<void>}
    */
   async signOut() {
+    if (!CLOUD_CONFIGURED) return;
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
@@ -167,6 +213,8 @@ export const authService = {
    * @returns {Promise<Object|null>} Session or null
    */
   async getSession() {
+    if (!CLOUD_CONFIGURED) return devSession;
+
     console.log('[Auth][session] getSession start');
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -187,6 +235,8 @@ export const authService = {
    * @returns {Promise<Object|null>} User or null
    */
   async getUser() {
+    if (!CLOUD_CONFIGURED) return devSession.user;
+
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     return user;
@@ -198,6 +248,11 @@ export const authService = {
    * @returns {Object} Subscription object
    */
   onAuthStateChange(callback) {
+    if (!CLOUD_CONFIGURED) {
+      setTimeout(() => callback('INITIAL_SESSION', devSession), 0);
+      return { unsubscribe() {} };
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('[Auth][session] Auth state change event:', event, session ? 'session exists' : 'no session');

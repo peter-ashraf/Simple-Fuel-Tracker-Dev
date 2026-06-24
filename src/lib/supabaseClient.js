@@ -1,20 +1,42 @@
 import { createClient } from '@supabase/supabase-js';
+import { CLOUD_CONFIGURED, SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/appConfig';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const createDisabledSupabaseProxy = () => {
+  const disabledCall = async () => ({
+    data: null,
+    error: new Error('Cloud is disabled in this development build.')
+  });
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    'Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env file'
-  );
-}
+  const disabledResult = { data: null, error: new Error('Cloud is disabled in this development build.') };
+  const chain = new Proxy({}, {
+    get: (_target, prop) => {
+      if (prop === 'then') return (resolve) => Promise.resolve(disabledResult).then(resolve);
+      return () => chain;
+    }
+  });
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  return {
+    auth: {
+      getSession: disabledCall,
+      getUser: disabledCall,
+      signInWithPassword: disabledCall,
+      signUp: disabledCall,
+      updateUser: disabledCall,
+      resetPasswordForEmail: disabledCall,
+      signOut: async () => ({ error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } })
+    },
+    from: () => chain,
+    rpc: disabledCall
+  };
+};
+
+export const supabase = CLOUD_CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
-});
+}) : createDisabledSupabaseProxy();
 
-console.log('[Supabase] client initialized');
+console.log(CLOUD_CONFIGURED ? '[Supabase] client initialized' : '[Supabase] cloud disabled for dev build');

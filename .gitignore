@@ -36,3 +36,5 @@ tmp_*.js
 *.sw?
 
 .env
+.env.*
+!.env.example

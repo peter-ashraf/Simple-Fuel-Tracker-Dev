@@ -1,12 +1,13 @@
 {
-  "name": "Fuel Tracker",
-  "short_name": "FuelTrack",
-  "description": "Track your vehicle fuel consumption, mileage and costs",
+  "id": "simple-fuel-tracker-dev",
+  "name": "Simple Fuel Tracker Dev",
+  "short_name": "FuelDev",
+  "description": "Development build for Simple Fuel Tracker",
   "theme_color": "#10b981",
   "background_color": "#0f172a",
   "display": "standalone",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/Simple-Fuel-Tracker-Dev/",
+  "scope": "/Simple-Fuel-Tracker-Dev/",
   "orientation": "portrait",
   "categories": ["utilities", "productivity"],
   "icons": [

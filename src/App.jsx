@@ -25,6 +25,7 @@ import { useFuel } from "./hooks/useFuelContext";
 import { useNotifications } from "./hooks/useNotifications";
 import { useTranslation } from "react-i18next";
 import { authService } from "./services/authService";
+import { CLOUD_CONFIGURED, IS_DEV_BUILD, STORAGE_PREFIX } from "./config/appConfig";
 import { calculateAverageDailyDistance } from "./utils/calculations";
 import { buildMaintenanceForecast } from "./utils/maintenanceForecast";
 
@@ -538,6 +539,11 @@ export default function App() {
   return (
     <div className="app-shell max-w-lg mx-auto relative overflow-hidden flex flex-col bg-slate-50 dark:bg-black transition-colors duration-300">
       <Header />
+      {IS_DEV_BUILD && (
+        <div className="fixed left-1/2 top-[calc(4.5rem+env(safe-area-inset-top))] z-50 -translate-x-1/2 rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-800 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+          {CLOUD_CONFIGURED ? "Dev cloud mode" : "Dev local mode"} - {STORAGE_PREFIX}
+        </div>
+      )}
 
       <main
         className={cn(

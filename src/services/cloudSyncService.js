@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { CLOUD_CONFIGURED, DEV_USER_ID, devCloudDisabledResult } from '../config/appConfig';
 import { v4 as uuidv4 } from 'uuid';
 import { makeMaintenanceTypeKey } from '../utils/maintenanceTypeKey';
 import { MAINTENANCE_CATEGORIES } from '../data/maintenanceCategories';
@@ -1339,6 +1340,8 @@ export const cloudSyncService = {
    * Get the current user ID from Supabase
    */
   async getUserId() {
+    if (!CLOUD_CONFIGURED) return DEV_USER_ID;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       return user?.id || null;
@@ -1393,6 +1396,18 @@ export const cloudSyncService = {
    * Get cloud data summary for a user
    */
   async getCloudDataSummary(userId) {
+    if (!CLOUD_CONFIGURED) {
+      return {
+        hasCloudData: false,
+        cloudCounts: {
+          vehicles: 0,
+          fillups: 0,
+          maintenance: 0,
+          tripEstimates: 0
+        }
+      };
+    }
+
     try {
       console.log('[Sync][getCloudDataSummary] Fetching cloud data summary for userId:', userId);
       
@@ -1884,6 +1899,8 @@ export const cloudSyncService = {
    * @param {boolean} options.silent - If true, no modal or success messages (for background sync)
    */
   async uploadLocalDataToCloud(userId, options = {}) {
+    if (!CLOUD_CONFIGURED) return devCloudDisabledResult('upload');
+
     const result = {
       success: false,
       action: 'upload',
@@ -2467,6 +2484,8 @@ export const cloudSyncService = {
    * Download cloud data to local (overwrites local)
    */
   async downloadCloudDataToLocal(userId) {
+    if (!CLOUD_CONFIGURED) return devCloudDisabledResult('download');
+
     const result = {
       success: false,
       action: 'download',
@@ -2658,6 +2677,10 @@ export const cloudSyncService = {
    */
   async mergeLocalDataToCloud(userId) {
     console.log('[Sync][merge] Starting merge to cloud');
+    if (!CLOUD_CONFIGURED) {
+      return devCloudDisabledResult('merge');
+    }
+
     const result = {
       success: false,
       action: 'merge',
@@ -3321,6 +3344,8 @@ export const cloudSyncService = {
    * Returns sync status for UI to decide if migration modal is needed
    */
   async initialize() {
+  if (!CLOUD_CONFIGURED) return null;
+
   if (initializationInProgress) {
     console.log('[Sync][initialize] Initialization already in progress, returning existing promise');
     return initializationPromise;
@@ -3580,6 +3605,8 @@ export const cloudSyncService = {
    * Continue sync after migration decision
    */
   async continueSyncAfterDecision(userId, decision) {
+  if (!CLOUD_CONFIGURED) return devCloudDisabledResult(decision);
+
   console.log('[Sync][initialize] Continuing sync after decision:', decision);
   console.log('[Sync][initialize] Decision value:', decision);
   console.log('[Sync][initialize] Action to perform:', decision);
@@ -5383,6 +5410,10 @@ export const cloudSyncService = {
   },
 
   async getDeletedFillupsByDate(userId, date) {
+    if (!CLOUD_CONFIGURED) {
+      return [];
+    }
+
     if (!userId) throw new Error('User ID is required.');
     if (!date) throw new Error('A date is required.');
 
@@ -5402,6 +5433,10 @@ export const cloudSyncService = {
   },
 
   async restoreDeletedFillup(userId, fillup) {
+    if (!CLOUD_CONFIGURED) {
+      return devCloudDisabledResult('restore-fillup');
+    }
+
     if (!userId) throw new Error('User ID is required.');
     if (!fillup?.id) throw new Error('Fill-up ID is required.');
 
@@ -5452,6 +5487,10 @@ export const cloudSyncService = {
   },
 
   async getDeletedMaintenanceByDate(userId, date) {
+    if (!CLOUD_CONFIGURED) {
+      return [];
+    }
+
     if (!userId) throw new Error('User ID is required.');
     if (!date) throw new Error('A date is required.');
 
@@ -5471,6 +5510,10 @@ export const cloudSyncService = {
   },
 
   async restoreDeletedMaintenance(userId, maintenance) {
+    if (!CLOUD_CONFIGURED) {
+      return devCloudDisabledResult('restore-maintenance');
+    }
+
     if (!userId) throw new Error('User ID is required.');
     if (!maintenance?.id) throw new Error('Maintenance entry ID is required.');
 
@@ -5536,6 +5579,10 @@ export const cloudSyncService = {
    * @returns {Promise<void>}
    */
   async deleteFillupFromCloud(fillup, userId) {
+    if (!CLOUD_CONFIGURED) {
+      return devCloudDisabledResult('delete-fillup');
+    }
+
     const { error } = await supabase
       .from('fillups')
       .update({ deleted_at: new Date().toISOString() })
@@ -5673,6 +5720,10 @@ export const cloudSyncService = {
    * Delete a single record from cloud
    */
   async deleteFromCloud(record, type, userId) {
+    if (!CLOUD_CONFIGURED) {
+      return devCloudDisabledResult(`delete-${type}`);
+    }
+
     switch (type) {
       case 'vehicle': return this.deleteVehicleFromCloud(record, userId);
       case 'fillup': return this.deleteFillupFromCloud(record, userId);
@@ -5685,6 +5736,10 @@ export const cloudSyncService = {
    * Delete a vehicle from cloud (tombstone)
    */
   async deleteVehicleFromCloud(vehicle, userId) {
+    if (!CLOUD_CONFIGURED) {
+      return devCloudDisabledResult('delete-vehicle');
+    }
+
     const { error } = await supabase
       .from('vehicles')
       .update({ deleted_at: new Date().toISOString() })
@@ -5700,6 +5755,10 @@ export const cloudSyncService = {
    * Delete a maintenance entry from cloud (tombstone)
    */
   async deleteMaintenanceFromCloud(maintenance, userId) {
+    if (!CLOUD_CONFIGURED) {
+      return devCloudDisabledResult('delete-maintenance');
+    }
+
     const tombstonePayload = { deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() };
     const stableKey = maintenance.stableKey || maintenance.stable_key;
     let error = null;
@@ -5754,6 +5813,10 @@ export const cloudSyncService = {
    * Delete a trip estimate from cloud (tombstone)
    */
   async deleteTripFromCloud(trip, userId) {
+    if (!CLOUD_CONFIGURED) {
+      return devCloudDisabledResult('delete-trip');
+    }
+
     const { error } = await supabase
       .from('trip_estimates')
       .update({ deleted_at: new Date().toISOString() })

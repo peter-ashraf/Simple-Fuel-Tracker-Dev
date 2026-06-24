@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
+import './config/storageIsolation'
 import { FuelProvider } from './hooks/useFuelContext.jsx'
 import { ThemeProvider } from './hooks/useTheme.jsx'
 import './index.css'

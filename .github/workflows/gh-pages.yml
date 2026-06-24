@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy Simple Fuel Tracker Dev to GitHub Pages
 
 on:
   push:

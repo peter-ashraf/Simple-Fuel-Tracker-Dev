@@ -78,10 +78,10 @@ export default function LoginScreen() {
             <GasPump weight="duotone" className="text-emerald-500 dark:text-emerald-400 w-10 h-10" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Fuel Tracker
+            Fuel Tracker Dev
           </h1>
           <p className="text-slate-500 dark:text-slate-400">
-            {isLogin ? 'Sign in to sync your data' : 'Create an account to get started'}
+            {isLogin ? 'Local dev mode is available without cloud sync' : 'Create a dev account to get started'}
           </p>
         </div>
 

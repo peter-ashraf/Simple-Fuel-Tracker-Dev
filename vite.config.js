@@ -7,7 +7,7 @@ import process from 'node:process'
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
-  const base = isProd ? '/Simple-Fuel-Tracker/' : '/';
+  const base = isProd ? '/Simple-Fuel-Tracker-Dev/' : '/';
   const shouldAnalyze = process.env.ANALYZE === 'true';
 
   return {
@@ -31,11 +31,13 @@ export default defineConfig(({ mode }) => {
       }),
       !shouldAnalyze && VitePWA({
         registerType: 'prompt',
+        cacheId: 'simple-fuel-tracker-dev',
         includeAssets: ['icon.png', 'favicon.svg'],
         manifest: {
-          name: 'Fuel Tracker',
-          short_name: 'FuelTrack',
-          description: 'Track your vehicle fuel consumption and costs',
+          id: 'simple-fuel-tracker-dev',
+          name: 'Simple Fuel Tracker Dev',
+          short_name: 'FuelDev',
+          description: 'Development build for Simple Fuel Tracker',
           theme_color: '#10b981',
           background_color: '#0f172a',
           display: 'standalone',
@@ -71,13 +73,14 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
+          cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',
               options: {
-                cacheName: 'google-fonts-cache',
+                cacheName: 'sft-dev-google-fonts-cache',
                 expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 cacheableResponse: { statuses: [0, 200] }
               }
