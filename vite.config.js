@@ -32,7 +32,12 @@ export default defineConfig(({ mode }) => {
       !shouldAnalyze && VitePWA({
         registerType: 'prompt',
         cacheId: 'simple-fuel-tracker-dev',
-        includeAssets: ['icon.png', 'favicon.svg'],
+        includeAssets: [
+          'icon.png',
+          'favicon.svg',
+          'ios/*.png',
+          'background-removal/**/*'
+        ],
         manifest: {
           id: 'simple-fuel-tracker-dev',
           name: 'Simple Fuel Tracker Dev',
@@ -41,8 +46,8 @@ export default defineConfig(({ mode }) => {
           theme_color: '#10b981',
           background_color: '#0f172a',
           display: 'standalone',
-          start_url: base,
-          scope: base,
+          start_url: '.',
+          scope: '.',
           orientation: 'portrait',
           categories: ['utilities', 'productivity'],
           icons: [
@@ -74,9 +79,9 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           cleanupOutdatedCaches: true,
-          maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,
+          maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
           globPatterns: [
-            '**/*.{js,css,html,ico,png,svg,woff2,wasm,onnx,json,bin,data}'
+            '**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg,woff2,wasm,onnx,json,bin,data,mjs}'
           ],
           runtimeCaching: [
             {
@@ -84,7 +89,7 @@ export default defineConfig(({ mode }) => {
               handler: 'CacheFirst',
               options: {
                 cacheName: 'sft-dev-onnxruntime-cache',
-                expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                expiration: { maxEntries: 24, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 cacheableResponse: { statuses: [0, 200] }
               }
             },
@@ -93,7 +98,7 @@ export default defineConfig(({ mode }) => {
               handler: 'CacheFirst',
               options: {
                 cacheName: 'sft-dev-background-removal-cache',
-                expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 cacheableResponse: { statuses: [0, 200] }
               }
             },
@@ -105,14 +110,22 @@ export default defineConfig(({ mode }) => {
                 expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
                 cacheableResponse: { statuses: [0, 200] }
               }
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'sft-dev-google-fonts-webfonts-cache',
+                expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
             }
           ]
         }
       })
     ],
-    // --- ADDED ESBUILD DROP CONFIGURATION ---
     esbuild: isProd ? {
-      drop: ['console', 'debugger']
+      drop: ['debugger']
     } : {},
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.0'),
@@ -125,11 +138,12 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
             'vendor-charts': ['chart.js', 'react-chartjs-2'],
-            'vendor-ui': ['lucide-react', 'framer-motion', 'clsx', 'tailwind-merge']
+            'vendor-ui': ['lucide-react', 'framer-motion', 'clsx', 'tailwind-merge'],
+            'vendor-bg-removal': ['@imgly/background-removal', 'onnxruntime-web']
           }
         }
       },
-      chunkSizeWarningLimit: 1000
+      chunkSizeWarningLimit: 1500
     }
   };
 });
