@@ -10,7 +10,7 @@ export function cn(...inputs) {
 }
 
 export const Card = forwardRef(({ className, children, ...props }, ref) => (
-  <div ref={ref} className={cn("bg-white dark:bg-white/[0.03] rounded-3xl p-5 relative border-0", className)} {...props}>
+  <div ref={ref} className={cn("premium-card p-5", className)} {...props}>
     {children}
   </div>
 ));
@@ -18,15 +18,15 @@ Card.displayName = "Card"
 
 export const MetricCard = forwardRef(({ as: Component = "div", className, children, variant = "default", ...props }, ref) => {
   const variants = {
-    default: "bg-slate-50 dark:bg-white/[0.03]",
-    secondary: "bg-slate-100/80 dark:bg-white/[0.06]",
-    accent: "bg-emerald-50/50 dark:bg-emerald-500/10"
+    default: "premium-card",
+    secondary: "premium-card",
+    accent: "premium-card border-emerald-500/20"
   };
   return createElement(
     Component,
     {
       ref,
-      className: cn(`${variants[variant]} rounded-3xl p-5 relative overflow-hidden border-0`, className),
+      className: cn(`${variants[variant]} p-5`, className),
       ...props
     },
     children
@@ -85,7 +85,7 @@ export const Input = forwardRef(({ className, inputMode, type, step, value, onCh
 Input.displayName = "Input"
 
 export const Label = forwardRef(({ className, children, ...props }, ref) => (
-  <label ref={ref} className={cn("text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 block ms-1", className)} {...props}>
+  <label ref={ref} className={cn("text-xs font-semibold uppercase tracking-wider mb-2 block ms-1", className)} {...props}>
     {children}
   </label>
 ));

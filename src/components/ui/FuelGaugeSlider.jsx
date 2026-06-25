@@ -1,88 +1,115 @@
-import React from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
+import { Fuel } from 'lucide-react';
 import { cn } from './index';
 
 export function FuelGaugeSlider({ value, onChange, disabled = false }) {
-  // Value is 0 to 100
-  // Arc calculation
-  // A semi-circle is 180 degrees.
-  // We'll map 0-100 to -90 to 90 degrees for the needle.
-  
   const rotation = (value / 100) * 180 - 90;
 
-  // Determine color based on value
   const getColor = (val) => {
-    if (val <= 15) return '#ef4444'; // red-500
-    if (val <= 30) return '#f59e0b'; // amber-500
-    if (val <= 60) return '#eab308'; // yellow-500
-    return '#10b981'; // emerald-500
+    if (val <= 15) return '#ff4d4f';
+    if (val <= 35) return '#ffb020';
+    return '#20e6b7';
   };
 
   const currentColor = getColor(value);
-
-  // SVG parameters for the arc
   const radius = 80;
-  const strokeWidth = 12;
   const center = 100;
+  const ticks = Array.from({ length: 9 }, (_, index) => {
+    const angle = (-90 + index * 22.5) * (Math.PI / 180);
+    const outer = radius + 8;
+    const inner = index % 2 === 0 ? radius - 10 : radius - 4;
+    return {
+      x1: center + Math.cos(angle) * outer,
+      y1: center + Math.sin(angle) * outer,
+      x2: center + Math.cos(angle) * inner,
+      y2: center + Math.sin(angle) * inner,
+    };
+  });
 
-  // Render arc segments for background (gradient or multi-colored)
-  // Instead of complex segments, we use a conic gradient or a simple arc
   return (
-    <div className={cn("flex flex-col items-center w-full max-w-[300px] mx-auto py-4 select-none transition-opacity duration-300", disabled && "opacity-40 pointer-events-none")}>
-      {/* Value Display */}
-      <div className="flex flex-col items-center mb-6">
-         <span className="text-4xl font-black tabular-nums tracking-tighter drop-shadow-sm transition-colors duration-300" style={{ color: currentColor }}>
-           {value}<span className="text-2xl text-slate-400 font-bold">%</span>
-         </span>
+    <div className={cn("w-full select-none transition-opacity duration-300", disabled && "opacity-45 pointer-events-none")}>
+      <div className="flex items-center gap-3 text-[var(--text-secondary)]">
+        <Fuel className="h-5 w-5 text-[var(--accent-primary)]" strokeWidth={1.8} />
+        <span className="text-sm font-bold">Fuel level after fill</span>
       </div>
 
-      <div className="relative w-full aspect-[2/1] mb-8 flex justify-center">
-        {/* SVG Gauge Background */}
-        <svg viewBox="0 0 200 110" className="w-full h-full overflow-visible drop-shadow-sm">
-          {/* Track Background */}
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+        <svg viewBox="0 0 200 116" className="h-auto w-full overflow-visible">
+          <defs>
+            <linearGradient id="fuelGaugeArc" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#ff4d4f" />
+              <stop offset="28%" stopColor="#ffb020" />
+              <stop offset="55%" stopColor="#64d96b" />
+              <stop offset="100%" stopColor="#20e6b7" />
+            </linearGradient>
+            <filter id="fuelGaugeGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
           <path
             d={`M ${center - radius} ${center} A ${radius} ${radius} 0 0 1 ${center + radius} ${center}`}
             fill="none"
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            className="text-slate-200 dark:text-slate-800"
+            stroke="rgba(127,139,154,0.28)"
+            strokeWidth="10"
             strokeLinecap="round"
           />
-          
-          {/* Active Track */}
           <motion.path
             d={`M ${center - radius} ${center} A ${radius} ${radius} 0 0 1 ${center + radius} ${center}`}
             fill="none"
-            stroke={currentColor}
-            strokeWidth={strokeWidth}
+            stroke="url(#fuelGaugeArc)"
+            strokeWidth="10"
             strokeLinecap="round"
+            filter="url(#fuelGaugeGlow)"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: value / 100 }}
-            transition={{ type: "spring", stiffness: 50, damping: 15 }}
+            transition={{ type: "spring", stiffness: 58, damping: 16 }}
           />
-          
-          {/* Needle Center Pin */}
-          <circle cx={center} cy={center} r={6} fill={currentColor} className="z-10 relative" />
-          
-          {/* Needle */}
-          <motion.path
+          {ticks.map((tick, index) => (
+            <line
+              key={index}
+              x1={tick.x1}
+              y1={tick.y1}
+              x2={tick.x2}
+              y2={tick.y2}
+              stroke="currentColor"
+              strokeWidth={index % 2 === 0 ? 2 : 1.3}
+              strokeLinecap="round"
+              className="text-slate-400 dark:text-slate-500"
+            />
+          ))}
+          <text x="20" y="109" fill="currentColor" className="text-xs font-bold text-slate-500">E</text>
+          <text x="174" y="109" fill="currentColor" className="text-xs font-bold text-slate-500">F</text>
+          <text x="100" y="76" fill="currentColor" className="text-xs font-bold text-slate-500" textAnchor="middle">1/2</text>
+          <motion.g
             initial={{ rotate: -90 }}
             animate={{ rotate: rotation }}
-            transition={{ type: "spring", stiffness: 60, damping: 15 }}
-            style={{ originX: 0.5, originY: 1 }}
-            d={`M ${center - 4} ${center} L ${center} ${center - radius + 10} L ${center + 4} ${center} Z`}
-            fill={currentColor}
-          />
-
-          {/* Labels E and F */}
-          <text x={center - radius - 15} y={center} fill="currentColor" className="text-xs font-bold text-slate-400" dominantBaseline="middle" textAnchor="middle">E</text>
-          <text x={center + radius + 15} y={center} fill="currentColor" className="text-xs font-bold text-slate-400" dominantBaseline="middle" textAnchor="middle">F</text>
+            transition={{ type: "spring", stiffness: 68, damping: 16 }}
+            style={{ originX: "100px", originY: "100px" }}
+          >
+            <path
+              d="M 96 100 L 100 38 L 104 100 Z"
+              fill={currentColor}
+              filter="url(#fuelGaugeGlow)"
+            />
+          </motion.g>
+          <circle cx="100" cy="100" r="10" fill="rgba(127,139,154,0.34)" stroke="rgba(255,255,255,0.24)" strokeWidth="2" />
+          <circle cx="100" cy="100" r="5" fill="#07111c" />
         </svg>
+
+        <div className="min-w-[94px] text-end">
+          <p className="text-4xl font-black leading-none tracking-normal" style={{ color: currentColor }}>
+            {value}%
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--text-secondary)]">Estimated</p>
+        </div>
       </div>
 
-      {/* Slider Input */}
-      <div className="w-full px-6 relative mt-2">
+      <div className="relative mt-5 w-full">
         <input
           type="range"
           min="0"
@@ -91,33 +118,44 @@ export function FuelGaugeSlider({ value, onChange, disabled = false }) {
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
           disabled={disabled}
-          className="w-full h-3 appearance-none bg-slate-200 dark:bg-slate-800 rounded-full outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all cursor-pointer touch-none disabled:cursor-not-allowed"
+          className="premium-fuel-range w-full cursor-pointer appearance-none rounded-full outline-none disabled:cursor-not-allowed"
           style={{
-            background: `linear-gradient(to right, ${currentColor} ${value}%, var(--tw-colors-slate-200) ${value}%)`
+            background: `linear-gradient(to right, ${currentColor} ${value}%, rgba(127,139,154,0.22) ${value}%)`,
+            '--fuel-thumb-color': currentColor,
           }}
         />
-        {/* Custom thumb styles using Tailwind are tricky for all browsers, so we use a simple input range, but the design mostly relies on the gauge above */}
         <style dangerouslySetInnerHTML={{__html: `
-          input[type=range]::-webkit-slider-thumb {
+          .premium-fuel-range {
+            height: 10px;
+          }
+          .premium-fuel-range::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 24px;
-            height: 24px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
-            background: #fff;
+            background: #f8fbff;
             cursor: pointer;
-            border: 2px solid ${currentColor};
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            border: 3px solid var(--fuel-thumb-color);
+            box-shadow: 0 0 20px color-mix(in srgb, var(--fuel-thumb-color) 38%, transparent);
             transition: border-color 0.2s;
           }
-          .dark input[type=range]::-webkit-slider-thumb {
-             background: #1e293b;
+          .premium-fuel-range::-moz-range-thumb {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #f8fbff;
+            border: 3px solid var(--fuel-thumb-color);
+            box-shadow: 0 0 20px color-mix(in srgb, var(--fuel-thumb-color) 38%, transparent);
+          }
+          .dark .premium-fuel-range::-webkit-slider-thumb {
+             background: #07111c;
+          }
+          .dark .premium-fuel-range::-moz-range-thumb {
+             background: #07111c;
           }
         `}} />
       </div>
-      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-4 text-center">
-        Drag to set the final fuel level
-      </p>
     </div>
   );
 }

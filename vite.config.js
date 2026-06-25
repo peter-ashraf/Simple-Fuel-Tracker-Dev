@@ -74,8 +74,29 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           cleanupOutdatedCaches: true,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,
+          globPatterns: [
+            '**/*.{js,css,html,ico,png,svg,woff2,wasm,onnx,json,bin,data}'
+          ],
           runtimeCaching: [
+            {
+              urlPattern: /\/assets\/ort\..*\.(?:js|mjs|wasm)$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'sft-dev-onnxruntime-cache',
+                expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
+            {
+              urlPattern: /\/background-removal\/.+/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'sft-dev-background-removal-cache',
+                expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',

@@ -1,8 +1,26 @@
-import { createElement, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useFuel } from "../hooks/useFuelContext";
 import { useTheme } from "../hooks/useTheme";
-import { Card, Input, Label, cn, Modal, ConfirmModal } from "./ui";
+import { Card, Input, Label, cn, Modal, ConfirmModal, PageWrapper } from "./ui";
+import {
+  Bell as LucideBell,
+  Camera,
+  CarFront,
+  CircleHelp,
+  Fuel as LucideFuel,
+  Heart,
+  Info,
+  Lock,
+  Ruler,
+  UserRound,
+} from "lucide-react";
+import {
+  GlassCard,
+  ScreenHeader,
+  SettingsRow,
+  VehicleArt,
+} from "./PremiumUI";
 import {
   Trash,
   Plus,
@@ -230,15 +248,8 @@ export default function Settings() {
     registration: null,
     checkedAt: null,
   });
-  const [activeSettingsSection, setActiveSettingsSection] = useState("account");
-  const settingsSections = [
-    { id: "account", label: "Account", icon: User },
-    { id: "vehicles", label: "Vehicles", icon: Car },
-    { id: "fuel", label: "Fuel", icon: CurrencyDollar },
-    { id: "cloud", label: "Cloud", icon: Database },
-    { id: "app", label: "App", icon: GearSix },
-  ];
-
+  const [activeSettingsSection, setActiveSettingsSection] = useState(null);
+  const [activeSettingsTitle, setActiveSettingsTitle] = useState("");
   useEffect(() => {
     let cancelled = false;
 
@@ -868,70 +879,184 @@ export default function Settings() {
   const getCloudVehicleName = (vehicleId) =>
     vehicles.find((vehicle) => vehicle.id === vehicleId)?.name ||
     "Unknown vehicle";
+  const profileUsername = accountForm.username?.trim();
+  const profileName =
+    profileUsername && profileUsername !== "dev-local"
+      ? profileUsername
+      : "Peter Ashraf";
+  const profileHandle =
+    profileUsername && profileUsername !== "dev-local"
+      ? profileUsername
+      : "peter.ashraf16";
+  const settingsRows = [
+    {
+      title: "My Profile",
+      subtitle: "Personal information and account",
+      section: "account",
+      icon: UserRound,
+      tone: "teal",
+    },
+    {
+      title: "My Vehicles",
+      subtitle: "Manage your vehicles",
+      section: "vehicles",
+      icon: CarFront,
+      tone: "blue",
+    },
+    {
+      title: "Fuel Preferences",
+      subtitle: "Fuel types, prices and efficiency",
+      section: "fuel",
+      icon: LucideFuel,
+      tone: "amber",
+    },
+    {
+      title: "Reminders",
+      subtitle: "Set alerts and notifications",
+      section: "app",
+      icon: LucideBell,
+      tone: "purple",
+    },
+    {
+      title: "Units & Display",
+      subtitle: "Customize units and appearance",
+      section: "app",
+      icon: Ruler,
+      tone: "teal",
+    },
+    {
+      title: "Privacy",
+      subtitle: "Manage your data and privacy",
+      section: "cloud",
+      icon: Lock,
+      tone: "blue",
+    },
+    {
+      title: "Help & Support",
+      subtitle: "FAQs, contact us and troubleshooting",
+      section: "app",
+      icon: CircleHelp,
+      tone: "purple",
+    },
+    {
+      title: "About Simple Fuel Tracker",
+      subtitle: "App info, terms and policies",
+      section: "app",
+      icon: Info,
+      tone: "teal",
+    },
+  ];
+  const openSettingsPanel = (row) => {
+    setActiveSettingsSection(row.section);
+    setActiveSettingsTitle(row.title);
+  };
+  const closeSettingsPanel = () => {
+    setActiveSettingsSection(null);
+    setActiveSettingsTitle("");
+  };
 
   return (
-    <div className="fixed inset-x-0 bottom-24 top-20 mx-auto flex w-full max-w-lg flex-col overflow-hidden px-5">
-      <div className="z-30 -mx-1 shrink-0 space-y-5 bg-white/95 px-1 pb-4 pt-1 backdrop-blur-xl dark:bg-black/95">
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            {t("settings")}
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {t("settings_description")}
-          </p>
-        </div>
+    <PageWrapper className="space-y-6 pb-8">
+      <ScreenHeader
+        title={t("settings")}
+        action={
+          <button type="button" className="icon-button" aria-label={t("notifications")}>
+            <LucideBell className="h-5 w-5" strokeWidth={1.9} />
+          </button>
+        }
+      />
 
-        <div className="rounded-2xl bg-slate-100 p-1 shadow-sm ring-1 ring-slate-200/70 backdrop-blur dark:bg-slate-950/90 dark:ring-slate-800/80">
-          <div className="grid grid-cols-5 gap-1">
-            {settingsSections.map(({ id, label, icon: Icon }) => {
-              const isActive = activeSettingsSection === id;
-
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setActiveSettingsSection(id)}
-                  className={cn(
-                    "relative flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition-colors",
-                    isActive
-                      ? "text-slate-950 dark:text-white"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
-                  )}
-                  aria-pressed={isActive}
-                >
-                  {isActive && (
-                    <MotionDiv
-                      layoutId="settingsSectionTab"
-                      className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-slate-800"
-                      transition={{
-                        type: "spring",
-                        stiffness: 400,
-                        damping: 32,
-                      }}
-                    />
-                  )}
-                  {createElement(Icon, {
-                    weight: "duotone",
-                    className: "relative z-10 h-4 w-4",
-                  })}
-                  <span className="relative z-10 hidden sm:inline">
-                    {label}
-                  </span>
-                </button>
-              );
-            })}
+      <GlassCard className="grid min-h-[150px] overflow-hidden p-0 min-[430px]:grid-cols-[0.58fr_0.42fr]">
+        <div className="z-10 flex items-center gap-4 p-4">
+          <div className="relative">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.13)] text-[var(--accent-primary)] shadow-[var(--shadow-glow)]">
+              <UserRound className="h-10 w-10" strokeWidth={1.8} />
+            </div>
+            <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-medium)] bg-[var(--bg-glass-strong)] text-[var(--text-primary)]">
+              <Camera className="h-4 w-4" strokeWidth={1.9} />
+            </span>
+          </div>
+          <div className="min-w-0">
+            <h2 className="truncate text-2xl font-black text-[var(--text-primary)]">
+              {profileName}
+            </h2>
+            <p className="mt-1 truncate text-sm font-semibold text-[var(--text-secondary)]">
+              {profileHandle}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+              <span className="inline-flex items-center gap-2">
+                <CarFront className="h-4 w-4" strokeWidth={1.9} />
+                {activeVehicle?.name || t("select_vehicle")}
+              </span>
+              <span className="rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.12)] px-3 py-1 text-xs text-[var(--accent-primary)]">
+                Active
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+        <VehicleArt className="hidden min-[430px]:block" />
+      </GlassCard>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-8 pt-4 no-scrollbar">
-        <MotionDiv
-          key={activeSettingsSection}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.18 }}
-          className="space-y-4"
-        >
+      <GlassCard className="overflow-hidden p-4">
+        {settingsRows.map((row) => (
+          <SettingsRow
+            key={row.title}
+            icon={row.icon}
+            title={row.title}
+            subtitle={row.subtitle}
+            tone={row.tone}
+            active={
+              activeSettingsSection === row.section &&
+              activeSettingsTitle === row.title
+            }
+            onClick={() => openSettingsPanel(row)}
+          />
+        ))}
+      </GlassCard>
+
+      <GlassCard className="flex items-center justify-between gap-4 p-5">
+        <div className="min-w-0">
+          <h3 className="text-xl font-black text-[var(--text-primary)]">
+            You're all set!
+          </h3>
+          <p className="mt-1 text-base font-semibold text-[var(--text-secondary)]">
+            We'll help you save more every day.
+          </p>
+        </div>
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.13)] text-[var(--accent-primary)]">
+          <Heart className="h-8 w-8" strokeWidth={1.9} />
+        </div>
+      </GlassCard>
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="flex w-full items-center gap-4 rounded-[var(--radius-xl)] border border-red-500/20 bg-red-500/10 p-5 text-start text-red-300 shadow-[var(--shadow-card)]"
+      >
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10">
+          <SignOut weight="duotone" className="h-5 w-5" />
+        </span>
+        <span>
+          <span className="block text-lg font-black">{t("logout")}</span>
+          <span className="mt-1 block text-sm font-semibold text-red-300/75">
+            Sign out from your account
+          </span>
+        </span>
+      </button>
+
+      <Modal
+        isOpen={Boolean(activeSettingsSection)}
+        onClose={closeSettingsPanel}
+        title={activeSettingsTitle || t("settings")}
+        size="lg"
+      >
+      <MotionDiv
+        key={`${activeSettingsSection}-${activeSettingsTitle}`}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18 }}
+        className="max-h-[70vh] space-y-4 overflow-y-auto pr-1"
+      >
       {activeSettingsSection === "vehicles" && (
         <>
       <section>
@@ -1599,19 +1724,10 @@ export default function Settings() {
         </Card>
       </section>
 
-      <section className="pt-8 mb-2">
-        <button
-          onClick={handleLogout}
-          className="w-full py-4 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition flex justify-center gap-2 items-center"
-        >
-          <SignOut weight="duotone" className="w-5 h-5" />
-          {t("logout")}
-        </button>
-      </section>
         </>
       )}
-        </MotionDiv>
-      </div>
+      </MotionDiv>
+      </Modal>
 
       <ConfirmModal
         isOpen={deleteModal.isOpen}
@@ -2658,6 +2774,6 @@ export default function Settings() {
           </MotionDiv>
         )}
       </AnimatePresence>
-    </div>
+    </PageWrapper>
   );
 }

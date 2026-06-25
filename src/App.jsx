@@ -7,19 +7,18 @@ import {
   useNavigate,
 } from "react-router-dom";
 import {
-  House,
-  ListBullets,
-  ChartPieSlice,
-  Plus,
-  GearSix,
-  GasPump,
-  CaretDown,
+  BarChart3,
   Check,
+  ChevronDown,
   Circle,
+  Clock3,
+  Fuel,
+  Home,
+  Plus,
+  Route as RouteIcon,
+  Settings,
   Wrench,
-  Path,
-  Tire,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { useFuel } from "./hooks/useFuelContext";
 import { useNotifications } from "./hooks/useNotifications";
@@ -30,13 +29,13 @@ import { calculateAverageDailyDistance } from "./utils/calculations";
 import { buildMaintenanceForecast } from "./utils/maintenanceForecast";
 
 // Pages
-import Dashboard from "./components/Dashboard";
-import History from "./components/History";
-import FillUpForm from "./components/FillUpForm";
+import Dashboard from "./components/DashboardPremium";
+import History from "./components/HistoryPremium";
+import FillUpForm from "./components/FillUpFormPremium";
 import LoginScreen from "./components/LoginScreen";
 import AppUpdatePrompt from "./components/AppUpdatePrompt";
 
-const Analytics = lazy(() => import("./components/Analytics"));
+const Analytics = lazy(() => import("./components/AnalyticsPremium"));
 const SettingsScreen = lazy(() => import("./components/Settings"));
 const TripCostEstimator = lazy(() =>
   import("./components/trips/TripCostEstimator"),
@@ -117,9 +116,9 @@ function Header() {
       <div className="w-full max-w-lg flex items-center justify-between">
         <div className="flex items-center gap-3 relative" ref={dropdownRef}>
           <div className="bg-emerald-500/10 dark:bg-emerald-500/20 p-2 rounded-xl border-0">
-            <GasPump
-              weight="duotone"
+            <Fuel
               className="text-emerald-500 dark:text-emerald-400 w-5 h-5 neon-glow"
+              strokeWidth={1.9}
             />
           </div>
 
@@ -136,9 +135,9 @@ function Header() {
                 animate={{ rotate: isOpen ? 180 : 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
-                <CaretDown
-                  weight="duotone"
+                <ChevronDown
                   className="w-5 h-5 text-slate-400"
+                  strokeWidth={2}
                 />
               </Motion.div>
             )}
@@ -187,13 +186,13 @@ function Header() {
             onClick={() => setFeaturesOpen(!featuresOpen)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.08] rounded-xl transition-colors border-0"
           >
-            <Wrench weight="duotone" className="w-4 h-4" />
+            <Wrench className="w-4 h-4" strokeWidth={1.9} />
             <span className="hidden sm:inline">{t("tools")}</span>
             <Motion.div
               animate={{ rotate: featuresOpen ? 180 : 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
-              <CaretDown weight="duotone" className="w-4 h-4" />
+              <ChevronDown className="w-4 h-4" strokeWidth={2} />
             </Motion.div>
           </button>
 
@@ -219,7 +218,7 @@ function Header() {
                       `w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold rounded-xl transition-colors ${isActive ? "bg-emerald-500 text-white" : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.04]"}`
                     }
                   >
-                    <Path weight="duotone" className="w-4 h-4" />
+                    <RouteIcon className="w-4 h-4" strokeWidth={1.9} />
                     {t("trip_estimator")}
                   </NavLink>
                   <NavLink
@@ -229,7 +228,7 @@ function Header() {
                       `w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold rounded-xl transition-colors ${isActive ? "bg-emerald-500 text-white" : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.04]"}`
                     }
                   >
-                    <Tire weight="duotone" className="w-4 h-4" />
+                    <Circle className="w-4 h-4" strokeWidth={1.9} />
                     {t("tyre_size")}
                   </NavLink>
                   <NavLink
@@ -239,7 +238,7 @@ function Header() {
                       `w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold rounded-xl transition-colors ${isActive ? "bg-emerald-500 text-white" : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.04]"}`
                     }
                   >
-                    <Wrench weight="duotone" className="w-4 h-4" />
+                    <Wrench className="w-4 h-4" strokeWidth={1.9} />
                     {t("maintenance")}
                   </NavLink>
                 </div>
@@ -532,25 +531,48 @@ export default function App() {
     return <LoginScreen />;
   }
 
+  const primaryRoutes = ["/", "/history", "/add", "/analytics", "/settings"];
+  const isPrimaryRoute = primaryRoutes.includes(location.pathname);
+  const isDashboardRoute = location.pathname === "/";
+  const showLegacyHeader = !isPrimaryRoute;
   const showBottomNav =
+    location.pathname !== "/add" &&
     !location.pathname.startsWith("/trip-estimator") &&
     !location.pathname.startsWith("/tyre-calculator");
 
   return (
-    <div className="app-shell max-w-lg mx-auto relative overflow-hidden flex flex-col bg-slate-50 dark:bg-black transition-colors duration-300">
-      <Header />
+    <div
+      className={cn(
+        "app-shell mx-auto relative overflow-hidden flex flex-col transition-colors duration-300",
+        isDashboardRoute ? "dashboard-app-shell" : "max-w-lg",
+      )}
+    >
+      {showLegacyHeader && <Header />}
       {IS_DEV_BUILD && (
-        <div className="fixed left-1/2 top-[calc(4.5rem+env(safe-area-inset-top))] z-50 -translate-x-1/2 rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-800 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+        <div
+          className={cn(
+            "dev-badge fixed left-1/2 z-50 -translate-x-1/2 px-3 py-1 text-[10px] font-black uppercase tracking-widest",
+            showLegacyHeader
+              ? "top-[calc(4.5rem+env(safe-area-inset-top))]"
+              : "top-[calc(0.75rem+env(safe-area-inset-top))]",
+          )}
+        >
           {CLOUD_CONFIGURED ? "Dev cloud mode" : "Dev local mode"} - {STORAGE_PREFIX}
         </div>
       )}
 
       <main
         className={cn(
-          "flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-[calc(5rem+env(safe-area-inset-top))]",
-          showBottomNav
-            ? "pb-[calc(7rem+env(safe-area-inset-bottom))]"
-            : "pb-[calc(2rem+env(safe-area-inset-bottom))]",
+          "flex-1 min-h-0 overscroll-contain",
+          isDashboardRoute ? "dashboard-route-main overflow-hidden p-0" : "overflow-y-auto px-4",
+          !isDashboardRoute &&
+            (showLegacyHeader
+              ? "pt-[calc(5rem+env(safe-area-inset-top))]"
+              : "pt-[calc(2.5rem+env(safe-area-inset-top))]"),
+          !isDashboardRoute &&
+            (showBottomNav
+              ? "pb-[calc(7rem+env(safe-area-inset-bottom))]"
+              : "pb-[calc(2.5rem+env(safe-area-inset-bottom))]"),
         )}
       >
         <Suspense fallback={<PageLoading />}>
@@ -572,201 +594,64 @@ export default function App() {
         </Suspense>
       </main>
 
-      {/* Bottom Tab Bar */}
       {showBottomNav && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-black/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/[0.06] px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] z-50 transition-colors duration-300">
-            <div className="flex items-center justify-between h-[72px] max-w-lg mx-auto px-4 relative">
-              <NavLink
-                to="/"
-                className={({ isActive }) =>
-                  cn(
-                    "flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors relative",
-                    isActive
-                      ? "text-emerald-500"
-                      : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300",
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <div className="flex flex-col items-center relative h-full justify-center">
-                    <Motion.div
-                      whileTap={{ scale: 0.8 }}
-                      className="flex flex-col items-center"
-                    >
-                      <House weight="duotone" className="w-[22px] h-[22px]" />
-                      <span className="text-[10px] font-semibold mt-0.5">
-                        {t("dashboard")}
-                      </span>
-                    </Motion.div>
-                    {isActive && (
-                      <Motion.div
-                        layoutId="nav-pill"
-                        className="absolute -bottom-1 w-8 h-1 bg-emerald-500 rounded-t-full"
-                        transition={{
-                          type: "spring",
-                          stiffness: 380,
-                          damping: 30,
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-              </NavLink>
+        <nav className="bottom-nav-shell" aria-label="Primary navigation">
+          <div className="bottom-nav">
+            <NavLink
+              to="/"
+              className={({ isActive }) => cn("nav-item", isActive && "active")}
+            >
+              <Motion.span whileTap={{ scale: 0.86 }} className="nav-item-inner">
+                <Home className="h-6 w-6" strokeWidth={1.9} />
+                <span>{t("dashboard")}</span>
+              </Motion.span>
+            </NavLink>
 
-              <NavLink
-                to="/history"
-                className={({ isActive }) =>
-                  cn(
-                    "flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors relative",
-                    isActive
-                      ? "text-emerald-500"
-                      : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300",
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <div className="flex flex-col items-center relative h-full justify-center">
-                    <Motion.div
-                      whileTap={{ scale: 0.8 }}
-                      className="flex flex-col items-center"
-                    >
-                      <ListBullets
-                        weight="duotone"
-                        className="w-[22px] h-[22px]"
-                      />
-                      <span className="text-[10px] font-semibold mt-0.5">
-                        {t("history")}
-                      </span>
-                    </Motion.div>
-                    {isActive && (
-                      <Motion.div
-                        layoutId="nav-pill"
-                        className="absolute -bottom-1 w-8 h-1 bg-emerald-500 rounded-t-full"
-                        transition={{
-                          type: "spring",
-                          stiffness: 380,
-                          damping: 30,
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-              </NavLink>
+            <NavLink
+              to="/history"
+              className={({ isActive }) => cn("nav-item", isActive && "active")}
+            >
+              <Motion.span whileTap={{ scale: 0.86 }} className="nav-item-inner">
+                <Clock3 className="h-6 w-6" strokeWidth={1.9} />
+                <span>{t("history")}</span>
+              </Motion.span>
+            </NavLink>
 
-              {/* Center Floating FAB */}
-              <div className="relative -top-5 flex justify-center w-20">
-                {(() => {
-                  const path = location.pathname;
-                  return (
-                    <NavLink
-                      to={
-                        path.startsWith("/maintenance")
-                          ? "/maintenance/add"
-                          : "/add"
-                      }
-                      className={({ isActive }) =>
-                        cn(
-                          "flex items-center justify-center w-[60px] h-[60px] rounded-[1.5rem] shadow-2xl transition-all border-0",
-                          isActive
-                            ? "bg-emerald-600 text-white shadow-emerald-500/40 dark:shadow-[0_0_25px_rgba(16,185,129,0.5)]"
-                            : "bg-emerald-500 text-white shadow-emerald-500/30 dark:shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400",
-                        )
-                      }
-                    >
-                      <Motion.div
-                        whileTap={{ scale: 0.9, rotate: 90 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 400,
-                          damping: 10,
-                        }}
-                      >
-                        <Plus className="w-8 h-8" strokeWidth={2.5} />
-                      </Motion.div>
-                    </NavLink>
-                  );
-                })()}
-              </div>
-
-              <NavLink
-                to="/analytics"
-                className={({ isActive }) =>
-                  cn(
-                    "flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors relative",
-                    isActive
-                      ? "text-emerald-500"
-                      : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300",
-                  )
-                }
+            <NavLink
+              to={location.pathname.startsWith("/maintenance") ? "/maintenance/add" : "/add"}
+              className="nav-add"
+              aria-label={t("add_fillup")}
+            >
+              <Motion.span
+                whileTap={{ scale: 0.9, rotate: 90 }}
+                transition={{ type: "spring", stiffness: 400, damping: 12 }}
               >
-                {({ isActive }) => (
-                  <div className="flex flex-col items-center relative h-full justify-center">
-                    <Motion.div
-                      whileTap={{ scale: 0.8 }}
-                      className="flex flex-col items-center"
-                    >
-                      <ChartPieSlice
-                        weight="duotone"
-                        className="w-[22px] h-[22px]"
-                      />
-                      <span className="text-[10px] font-semibold mt-0.5">
-                        {t("stats")}
-                      </span>
-                    </Motion.div>
-                    {isActive && (
-                      <Motion.div
-                        layoutId="nav-pill"
-                        className="absolute -bottom-1 w-8 h-1 bg-emerald-500 rounded-t-full"
-                        transition={{
-                          type: "spring",
-                          stiffness: 380,
-                          damping: 30,
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-              </NavLink>
+                <Plus className="h-9 w-9" strokeWidth={2.5} />
+              </Motion.span>
+            </NavLink>
 
-              <NavLink
-                to="/settings"
-                className={({ isActive }) =>
-                  cn(
-                    "flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors relative",
-                    isActive
-                      ? "text-emerald-500"
-                      : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300",
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <div className="flex flex-col items-center relative h-full justify-center">
-                    <Motion.div
-                      whileTap={{ scale: 0.8 }}
-                      className="flex flex-col items-center"
-                    >
-                      <GearSix weight="duotone" className="w-[22px] h-[22px]" />
-                      <span className="text-[10px] font-semibold mt-0.5">
-                        {t("config")}
-                      </span>
-                    </Motion.div>
-                    {isActive && (
-                      <Motion.div
-                        layoutId="nav-pill"
-                        className="absolute -bottom-1 w-8 h-1 bg-emerald-500 rounded-t-full"
-                        transition={{
-                          type: "spring",
-                          stiffness: 380,
-                          damping: 30,
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-              </NavLink>
-            </div>
-          </nav>
-        )}
+            <NavLink
+              to="/analytics"
+              className={({ isActive }) => cn("nav-item", isActive && "active")}
+            >
+              <Motion.span whileTap={{ scale: 0.86 }} className="nav-item-inner">
+                <BarChart3 className="h-6 w-6" strokeWidth={1.9} />
+                <span>{t("analytics")}</span>
+              </Motion.span>
+            </NavLink>
+
+            <NavLink
+              to="/settings"
+              className={({ isActive }) => cn("nav-item", isActive && "active")}
+            >
+              <Motion.span whileTap={{ scale: 0.86 }} className="nav-item-inner">
+                <Settings className="h-6 w-6" strokeWidth={1.9} />
+                <span>{t("settings")}</span>
+              </Motion.span>
+            </NavLink>
+          </div>
+        </nav>
+      )}
 
       {/* Data Migration Modal */}
       <AnimatePresence>
