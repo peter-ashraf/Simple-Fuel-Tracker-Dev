@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   CalendarDays,
   ChevronLeft,
+  Fuel,
+  Gauge,
   MapPin,
   Save,
   Wrench,
@@ -22,13 +24,55 @@ import {
   Label,
   cn,
 } from "./ui";
-import {
-  GlassCard,
-  MaintenanceAlertCard,
-  ScreenHeader,
-  SegmentedControl,
-} from "./PremiumUI";
+import { GlassCard, MaintenanceAlertCard, SegmentedControl } from "./PremiumUI";
 import { calculateTripMetrics } from "../utils/calculations";
+
+
+const sanitizeIntegerInput = (value) => String(value || "").replace(/\D/g, "");
+
+const sanitizeDecimalInput = (value, maxDecimals = 2) => {
+  const raw = String(value || "")
+    .replace(/,/g, "")
+    .replace(/[^0-9.]/g, "");
+
+  const [integerPart, ...decimalParts] = raw.split(".");
+  const decimals = decimalParts.join("");
+
+  if (raw.includes(".")) {
+    return `${integerPart || "0"}.${decimals.slice(0, maxDecimals)}`;
+  }
+
+  return integerPart;
+};
+
+const parseNumberInput = (value) => {
+  const numeric = Number(String(value || "").replace(/,/g, ""));
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const blockInvalidIntegerKey = (event) => {
+  if (["e", "E", "+", "-", ".", ","].includes(event.key)) {
+    event.preventDefault();
+  }
+};
+
+const blockInvalidDecimalKey = (event) => {
+  if (["e", "E", "+", "-"].includes(event.key)) {
+    event.preventDefault();
+  }
+};
+
+function FieldCard({ label, icon: Icon, children, className }) {
+  return (
+    <div className={cn("fillup-field-card", className)}>
+      <div className="fillup-field-label-row">
+        {Icon && <Icon className="h-4 w-4" strokeWidth={1.9} />}
+        <Label className="fillup-field-label">{label}</Label>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export default function FillUpFormPremium() {
   const {
@@ -72,6 +116,12 @@ export default function FillUpFormPremium() {
   const [notes, setNotes] = useState("");
   const [tankLevelAfter, setTankLevelAfter] = useState(100);
 
+  const fuelUnitPrice = Number(fuelPrices[selectedFuelType] || 0);
+  const litersValue = parseNumberInput(liters);
+  const moneyValue = parseNumberInput(moneySpent);
+  const costPerLiterLabel = fuelUnitPrice ? `${fuelUnitPrice.toFixed(2)} EGP/L` : "—";
+  const canSave = Boolean((liters || moneySpent) && odometer);
+
   useEffect(() => {
     if (activeVehicleFillUps.length > 0 && !odometer) {
       setOdometer(String(activeVehicleFillUps[activeVehicleFillUps.length - 1].odometer));
@@ -79,14 +129,30 @@ export default function FillUpFormPremium() {
   }, [activeVehicleFillUps, odometer]);
 
   useEffect(() => {
-    if (lastEditedField === "liters" && liters && fuelPrices[selectedFuelType]) {
-      setMoneySpent((Number(liters) * fuelPrices[selectedFuelType]).toFixed(2));
-    } else if (
-      lastEditedField === "moneySpent" &&
-      moneySpent &&
-      fuelPrices[selectedFuelType]
-    ) {
-      setLiters((Number(moneySpent) / fuelPrices[selectedFuelType]).toFixed(2));
+    if (lastEditedField === "liters") {
+      if (!liters) {
+        setMoneySpent("");
+        return;
+      }
+
+      if (fuelPrices[selectedFuelType]) {
+        const nextMoney = parseNumberInput(liters) * fuelPrices[selectedFuelType];
+        if (Number.isFinite(nextMoney)) {
+          setMoneySpent(nextMoney.toFixed(2));
+        }
+      }
+    } else if (lastEditedField === "moneySpent") {
+      if (!moneySpent) {
+        setLiters("");
+        return;
+      }
+
+      if (fuelPrices[selectedFuelType]) {
+        const nextLiters = parseNumberInput(moneySpent) / fuelPrices[selectedFuelType];
+        if (Number.isFinite(nextLiters)) {
+          setLiters(nextLiters.toFixed(2));
+        }
+      }
     }
   }, [liters, moneySpent, selectedFuelType, fuelPrices, lastEditedField]);
 
@@ -163,7 +229,7 @@ export default function FillUpFormPremium() {
   };
 
   const buildFillUpEntry = () => {
-    const newOdometer = Number(odometer);
+    const newOdometer = parseNumberInput(odometer);
     const newDate = new Date(date);
     const now = new Date();
     newDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
@@ -172,7 +238,7 @@ export default function FillUpFormPremium() {
       date,
       timestamp: newDate.toISOString(),
       fuelType: selectedFuelType,
-      liters: Number(liters) || 0,
+      liters: parseNumberInput(liters),
       odometer: newOdometer,
       pricePerLiter: Number(fuelPrices[selectedFuelType] || 0),
       station: station.trim(),
@@ -271,76 +337,106 @@ export default function FillUpFormPremium() {
 
   return (
     <>
-      <div className="space-y-6 pb-4">
-        <div className="grid grid-cols-[52px_1fr_52px] items-start gap-3">
+      <div className="fillup-reference-screen">
+        <div className="fillup-reference-header">
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="icon-button"
+            className="fillup-back-button"
             aria-label={t("back")}
           >
-            <ChevronLeft className={cn("h-7 w-7", isRtl && "rotate-180")} />
+            <ChevronLeft className={cn("h-6 w-6", isRtl && "rotate-180")} strokeWidth={2.1} />
           </button>
-          <ScreenHeader
-            title={t("add_fillup")}
-            subtitle={
-              <span className="inline-flex items-center justify-center gap-3">
-                {activeVehicle?.name || t("select_vehicle")}
-                <span className="status-dot" />
-                <span className="text-[var(--accent-primary)]">Active</span>
-              </span>
-            }
-            centered
-          />
-          <div />
+
+          <div className="fillup-header-copy">
+            <h1>Add Fill-up</h1>
+            <p>
+              <span>{activeVehicle?.name || t("select_vehicle")}</span>
+              <span className="status-dot" />
+              <span className="fillup-active-text">Active</span>
+            </p>
+          </div>
         </div>
 
-        <form id="fillup-form" onSubmit={handleSubmit} className="space-y-5">
-          {validationError && (
-            <div className="flex items-start gap-3 rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm font-bold text-red-300">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-              <span>{validationError}</span>
-            </div>
-          )}
-
-          <GlassCard className="space-y-5 p-5">
-            <div>
-              <Label>{t("date")}</Label>
-              <div className="relative">
-                <DateInput value={date} onChange={setDate} required />
-                <CalendarDays className="pointer-events-none absolute end-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--accent-primary)]" />
+        <form id="fillup-form" onSubmit={handleSubmit} className="fillup-reference-form">
+          <GlassCard className="fillup-reference-card">
+            {validationError && (
+              <div className="fillup-validation-message">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>{validationError}</span>
               </div>
-            </div>
+            )}
 
-            <div className="form-grid-2">
-              <div>
-                <Label>{t("odometer")} (km)</Label>
+            <FieldCard label={t("date")} icon={CalendarDays} className="fillup-field-card-full fillup-date-field">
+              <DateInput
+                value={date}
+                onChange={setDate}
+                required
+                className="fillup-date-input"
+              />
+              <CalendarDays className="fillup-date-icon h-5 w-5" strokeWidth={1.9} />
+            </FieldCard>
+
+            <div className="fillup-input-grid">
+              <FieldCard label={`${t("odometer")} (km)`} icon={Gauge}>
                 <Input
                   type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  step="1"
                   value={odometer}
-                  onChange={(event) => setOdometer(event.target.value)}
-                  placeholder="179566"
+                  onChange={(event) => setOdometer(sanitizeIntegerInput(event.target.value))}
+                  onKeyDown={blockInvalidIntegerKey}
+                  placeholder="179,566"
                   required
                   min="0"
+                  className="fillup-input-control"
                 />
-              </div>
-              <div>
-                <Label>{t("liters")} (L)</Label>
+              </FieldCard>
+
+              <FieldCard label={`${t("liters")} (L)`} icon={Fuel}>
                 <Input
                   type="number"
+                  inputMode="decimal"
+                  pattern="[0-9]*[.]?[0-9]*"
                   step="0.01"
                   value={liters}
                   onChange={(event) => {
                     setLastEditedField("liters");
-                    setLiters(event.target.value);
+                    setLiters(sanitizeDecimalInput(event.target.value, 2));
                   }}
+                  onKeyDown={blockInvalidDecimalKey}
                   placeholder="45.5"
+                  className="fillup-input-control"
                 />
+              </FieldCard>
+            </div>
+
+            <div className="fillup-price-row">
+              <FieldCard label={`${t("total_spent")} (${t("currency")})`} className="fillup-price-field">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  pattern="[0-9]*[.]?[0-9]*"
+                  step="0.01"
+                  value={moneySpent}
+                  onChange={(event) => {
+                    setLastEditedField("moneySpent");
+                    setMoneySpent(sanitizeDecimalInput(event.target.value, 2));
+                  }}
+                  onKeyDown={blockInvalidDecimalKey}
+                  placeholder="1000.00"
+                  className="fillup-input-control"
+                />
+              </FieldCard>
+              <div className="fillup-unit-price" aria-label="Unit price">
+                <span>Unit</span>
+                <strong>{costPerLiterLabel}</strong>
               </div>
             </div>
 
-            <div>
-              <Label>{t("fuel_type")}</Label>
+            <div className="fillup-section-block fillup-fuel-type-block">
+              <Label className="fillup-block-label">{t("fuel_type")}</Label>
               <SegmentedControl
                 name="fillup-fuel"
                 value={selectedFuelType}
@@ -353,30 +449,8 @@ export default function FillUpFormPremium() {
               />
             </div>
 
-            <div className="form-grid-2">
-              <div>
-                <Label>{t("unit_egp_l")}</Label>
-                <div className="input-field flex items-center">
-                  {Number(fuelPrices[selectedFuelType] || 0).toFixed(2)}
-                </div>
-              </div>
-              <div>
-                <Label>{t("total_spent")} ({t("currency")})</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={moneySpent}
-                  onChange={(event) => {
-                    setLastEditedField("moneySpent");
-                    setMoneySpent(event.target.value);
-                  }}
-                  placeholder="1000.00"
-                />
-              </div>
-            </div>
-
             {activeAlerts.length > 0 && (
-              <div className="grid gap-3 min-[430px]:grid-cols-2">
+              <div className="fillup-alert-grid">
                 {activeAlerts.slice(0, 2).map((alert) => {
                   const cat = getCategoryById(alert.type);
                   const isOverdue = Number(odometer) >= alert.nextDueODO;
@@ -387,7 +461,7 @@ export default function FillUpFormPremium() {
                       tone={isOverdue ? "danger" : "warning"}
                       title={t(cat?.id || alert.type)}
                       subtitle={isOverdue ? t("overdue") : t("due_soon")}
-                      detail={isOverdue ? "94%" : "72%"}
+                      detail={alert.nextDueODO ? `${Number(alert.nextDueODO).toLocaleString()} km` : ""}
                       onClick={() => navigate("/maintenance")}
                     />
                   );
@@ -395,9 +469,9 @@ export default function FillUpFormPremium() {
               </div>
             )}
 
-            <GlassCard className="p-4">
+            <GlassCard className="fillup-gauge-card">
               {!activeVehicle?.tankCapacity && (
-                <div className="mb-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm font-semibold text-[var(--warning)]">
+                <div className="fillup-capacity-warning">
                   {t("tank_capacity_required")}
                 </div>
               )}
@@ -408,33 +482,31 @@ export default function FillUpFormPremium() {
               />
             </GlassCard>
 
-            <div>
-              <Label>{t("station")} ({t("optional")})</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={station}
-                  onChange={(event) => setStation(event.target.value)}
-                  placeholder="..."
-                  className="flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowStationModal(true)}
-                  className="icon-button"
-                  aria-label={t("station")}
-                >
-                  <MapPin className="h-5 w-5 text-[var(--accent-primary)]" />
-                </button>
-              </div>
-            </div>
+            <div className="fillup-bottom-grid">
+              <FieldCard label={`${t("station")} (${t("optional")})`} className="fillup-station-field">
+                <div className="fillup-station-row">
+                  <Input
+                    type="text"
+                    value={station}
+                    onChange={(event) => setStation(event.target.value)}
+                    placeholder="Station name"
+                    className="fillup-input-control"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowStationModal(true)}
+                    className="fillup-station-button"
+                    aria-label={t("station")}
+                  >
+                    <MapPin className="h-4 w-4" />
+                  </button>
+                </div>
+              </FieldCard>
 
-            <div>
-              <Label>{t("notes")} ({t("optional")})</Label>
-              <div className="space-y-3">
+              <FieldCard label={`${t("notes")} (${t("optional")})`} className="fillup-notes-field">
                 <textarea
-                  className="input-field min-h-[104px] w-full"
-                  rows="3"
+                  className="input-field fillup-notes-input"
+                  rows="2"
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="e.g., Long drive to Alexandria"
@@ -443,24 +515,29 @@ export default function FillUpFormPremium() {
                   <button
                     type="button"
                     onClick={handleConvertToMaintenanceLog}
-                    className="premium-secondary-button px-4"
+                    className="fillup-maintenance-note-button"
                   >
                     <Wrench className="h-4 w-4" /> {t("add_maintenance")}
                   </button>
                 )}
-              </div>
+              </FieldCard>
             </div>
 
-            <button
-              type="submit"
-              disabled={(!liters && !moneySpent) || !odometer}
-              className="premium-primary-button"
-            >
-              <Save className="h-7 w-7" />
-              Save Fill-up
-            </button>
           </GlassCard>
         </form>
+
+        <button
+          type="submit"
+          form="fillup-form"
+          disabled={!canSave}
+          className="fillup-save-button"
+        >
+          <Save className="h-5 w-5" />
+          <span>Save Fill-up</span>
+          {moneyValue > 0 && litersValue > 0 && (
+            <small>{litersValue.toFixed(1)} L · {moneyValue.toFixed(0)} EGP</small>
+          )}
+        </button>
       </div>
 
       <StationSuggestion

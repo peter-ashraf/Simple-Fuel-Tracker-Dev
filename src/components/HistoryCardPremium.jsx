@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import {
   CalendarDays,
@@ -12,6 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { calculateTripMetrics } from "../utils/calculations";
 import { formatTo2Decimals } from "../utils/formatting";
@@ -29,6 +31,20 @@ import {
 import { SegmentedControl } from "./PremiumUI";
 import "./HistoryCard.css";
 
+const MotionDiv = motion.div;
+
+const numberOrZero = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sanitizeInteger = (value) => String(value ?? "").replace(/[^0-9]/g, "");
+const sanitizeDecimal = (value) => {
+  const raw = String(value ?? "").replace(/[^0-9.]/g, "");
+  const [integerPart, ...decimalParts] = raw.split(".");
+  return `${integerPart}${decimalParts.length ? `.${decimalParts.join("")}` : ""}`;
+};
+
 export default function HistoryCardPremium({
   fill,
   index,
@@ -37,27 +53,47 @@ export default function HistoryCardPremium({
   onUpdate,
 }) {
   const { t, i18n } = useTranslation();
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const isRtl = i18n.language.startsWith("ar");
 
-  const [editForm, setEditForm] = useState({
+  const getInitialForm = () => ({
     liters: fill.liters,
     odometer: fill.odometer,
     fuelType: fill.fuelType,
     station: fill.station || "",
     notes: fill.notes || "",
     date: new Date(fill.timestamp).toISOString().substring(0, 10),
-    totalCost: fill.liters * (fill.pricePerLiter || 0),
+    totalCost: (numberOrZero(fill.liters) * numberOrZero(fill.pricePerLiter)).toFixed(2),
     tankLevelAfter:
       fill.tankLevelAfter !== undefined ? fill.tankLevelAfter : 100,
   });
+
+  const [editForm, setEditForm] = useState(getInitialForm);
   const [showPartialSlider, setShowPartialSlider] = useState(
     fill.isPartialFill || fill.tankLevelAfter < 100,
   );
 
+  useEffect(() => {
+    if (!editOpen || typeof document === "undefined") return undefined;
+
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = originalHtmlOverscroll;
+    };
+  }, [editOpen]);
+
   const metrics = calculateTripMetrics(fillUps, index);
-  const tripCost = (fill.liters * (fill.pricePerLiter || 0)).toFixed(2);
+  const tripCost = numberOrZero(fill.liters) * numberOrZero(fill.pricePerLiter);
   const kmPerLiterRaw = metrics.kmPerLiter;
   const kmPerLiter =
     kmPerLiterRaw > 0 ? formatTo2Decimals(kmPerLiterRaw).toFixed(2) : "-";
@@ -68,6 +104,19 @@ export default function HistoryCardPremium({
   const tripDistance =
     metrics.distance > 0 ? Math.round(metrics.distance).toLocaleString() : "-";
   const efficiencyThresholds = calculateEfficiencyThresholds(fillUps);
+
+  const editPricePerLiter = useMemo(() => {
+    const liters = numberOrZero(editForm.liters);
+    const cost = numberOrZero(editForm.totalCost);
+    if (!liters) return fill.pricePerLiter || 0;
+    return cost / liters;
+  }, [editForm.liters, editForm.totalCost, fill.pricePerLiter]);
+
+  const handleOpenEdit = () => {
+    setEditForm(getInitialForm());
+    setShowPartialSlider(fill.isPartialFill || fill.tankLevelAfter < 100);
+    setEditOpen(true);
+  };
 
   const handleSave = () => {
     const baseDate = new Date(editForm.date);
@@ -90,167 +139,68 @@ export default function HistoryCardPremium({
       tankLevelAfter: showPartialSlider ? editForm.tankLevelAfter : 100,
       isPartialFill: showPartialSlider,
     });
-    setIsFlipped(false);
+    setEditOpen(false);
   };
 
   const handleCancel = () => {
-    setEditForm({
-      liters: fill.liters,
-      odometer: fill.odometer,
-      fuelType: fill.fuelType,
-      station: fill.station || "",
-      notes: fill.notes || "",
-      date: new Date(fill.timestamp).toISOString().substring(0, 10),
-      totalCost: fill.liters * (fill.pricePerLiter || 0),
-      tankLevelAfter:
-        fill.tankLevelAfter !== undefined ? fill.tankLevelAfter : 100,
-    });
-    setIsFlipped(false);
+    setEditForm(getInitialForm());
+    setEditOpen(false);
   };
 
-  return (
-    <div className={`flip-card premium-history-flip ${isFlipped ? "flipped" : ""} ${isRtl ? "rtl" : ""}`}>
-      <div className="flip-card-inner">
-        <div className="flip-card-front premium-history-card">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.18)] px-3 py-0.5 text-sm font-black text-[var(--accent-primary)]">
-                  P{fill.fuelType || "92"}
-                </span>
-                <p className="text-sm font-bold text-[var(--text-secondary)]">
-                  {format(new Date(fill.timestamp), "MMM d, yyyy")}
-                </p>
-              </div>
+  const editSheet = (
+    <AnimatePresence>
+      {editOpen && (
+        <MotionDiv
+          className="history-edit-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
+        >
+          <button
+            type="button"
+            className="history-edit-backdrop"
+            onClick={handleCancel}
+            aria-label={t("cancel")}
+          />
+          <MotionDiv
+            className="history-edit-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit fill-up"
+            initial={{ opacity: 0, y: 40, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.985 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            <div className="history-edit-handle" />
 
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-[28px] font-black leading-none tracking-normal text-[var(--text-primary)]">
-                  {formatTo2Decimals(Number(tripCost)).toFixed(2)}
-                </span>
-                <span className="text-sm font-semibold text-[var(--text-secondary)]">
-                  {t("currency")}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2">
-              <p className="text-[11px] font-semibold text-[var(--text-secondary)]">
-                {format(new Date(fill.timestamp), "h:mm a")}
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsFlipped(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] transition active:scale-95"
-                aria-label={t("edit")}
-              >
-                <ChevronRight className={cn("h-5 w-5", isRtl && "rotate-180")} />
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[var(--text-secondary)]">
-            <span className="inline-flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5" />
-              {fill.odometer.toLocaleString()} km
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Fuel className="h-3.5 w-3.5" />
-              {fill.liters} {t("liters_abbr")}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <CircleDollarSign className="h-3.5 w-3.5" />
-              {fill.pricePerLiter} {t("unit_egp_l")}
-            </span>
-          </div>
-
-          <div className="mt-2 grid grid-cols-3 gap-1 rounded-[20px] border border-[var(--border-soft)] bg-[rgba(127,139,154,0.08)] p-1.5">
-            <div className="px-1 py-1 text-center">
-              <Route className="mx-auto mb-0.5 h-3.5 w-3.5 text-[var(--text-secondary)]" />
-              <p className="text-base font-black text-[var(--text-primary)]">
-                {index === 0 ? "-" : tripDistance}
-                {index !== 0 && <span className="ms-1 text-xs font-semibold">km</span>}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                {t("distance")}
-              </p>
-            </div>
-            <div className="border-x border-[var(--border-soft)] px-1 py-1 text-center">
-              <Gauge className="mx-auto mb-0.5 h-3.5 w-3.5 text-[var(--accent-primary)]" />
-              <p
-                className={cn(
-                  "text-base font-black",
-                  index === 0
-                    ? "text-[var(--text-primary)]"
-                    : getEfficiencyTextClass(kmPerLiterRaw, efficiencyThresholds),
-                )}
-              >
-                {index === 0 ? "-" : kmPerLiter}
-                {index !== 0 && <span className="ms-1 text-xs font-semibold">km/L</span>}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                Avg. Efficiency
-              </p>
-            </div>
-            <div className="px-1 py-1 text-center">
-              <Droplet className="mx-auto mb-0.5 h-3.5 w-3.5 text-[var(--text-secondary)]" />
-              <p className="text-base font-black text-[var(--text-primary)]">
-                {index === 0 ? "-" : litersPer100km}
-                {index !== 0 && <span className="ms-1 text-xs font-semibold">L/100km</span>}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                Consumption
-              </p>
-            </div>
-          </div>
-
-          {fill.notes && (
-            <p className="mt-4 rounded-2xl border border-[var(--border-soft)] bg-[rgba(127,139,154,0.08)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)]">
-              {fill.notes}
-            </p>
-          )}
-        </div>
-
-        <div className="flip-card-back premium-history-card p-5">
-          <div className="flex h-full flex-col">
-            <div className="mb-5 flex items-start justify-between gap-3">
+            <header className="history-edit-header">
               <div>
-                <p className="text-lg font-black text-[var(--text-primary)]">
-                  Edit Fill-up
-                </p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text-secondary)]">
-                  {format(new Date(fill.timestamp), "MMM d, yyyy")}
-                </p>
+                <h2>Edit Fill-up</h2>
+                <p>{format(new Date(fill.timestamp), "MMM d, yyyy")}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="flex h-11 items-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-4 text-sm font-black text-slate-950"
-                >
-                  <Save className="h-4 w-4" />
-                  {t("save")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[var(--text-secondary)]"
-                  aria-label={t("cancel")}
-                >
-                  <X className="h-5 w-5" />
-                </button>
+              <div className="history-edit-actions">
                 <button
                   type="button"
                   onClick={() => setDeleteModal(true)}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/10 text-red-400"
+                  className="danger"
                   aria-label={t("delete")}
                 >
                   <Trash2 className="h-5 w-5" />
                 </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  aria-label={t("cancel")}
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-            </div>
+            </header>
 
-            <div className="space-y-4">
-              <div className="form-grid-2">
+            <div className="history-edit-content">
+              <div className="history-edit-grid two">
                 <div>
                   <Label>{t("date")}</Label>
                   <Input
@@ -264,10 +214,14 @@ export default function HistoryCardPremium({
                 <div>
                   <Label>{t("odometer")}</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={editForm.odometer}
                     onChange={(event) =>
-                      setEditForm({ ...editForm, odometer: event.target.value })
+                      setEditForm({
+                        ...editForm,
+                        odometer: sanitizeInteger(event.target.value),
+                      })
                     }
                   />
                 </div>
@@ -287,18 +241,19 @@ export default function HistoryCardPremium({
                 />
               </div>
 
-              <div className="form-grid-2">
+              <div className="history-edit-grid two">
                 <div>
                   <Label>{t("liters")}</Label>
                   <Input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={editForm.liters}
                     onChange={(event) => {
-                      const val = parseFloat(event.target.value) || 0;
+                      const cleanValue = sanitizeDecimal(event.target.value);
+                      const val = parseFloat(cleanValue) || 0;
                       setEditForm({
                         ...editForm,
-                        liters: event.target.value,
+                        liters: cleanValue,
                         totalCost: (val * (fill.pricePerLiter || 1)).toFixed(2),
                       });
                     }}
@@ -307,19 +262,30 @@ export default function HistoryCardPremium({
                 <div>
                   <Label>{t("total_spent")}</Label>
                   <Input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={editForm.totalCost}
                     onChange={(event) => {
-                      const val = parseFloat(event.target.value) || 0;
+                      const cleanValue = sanitizeDecimal(event.target.value);
+                      const val = parseFloat(cleanValue) || 0;
                       setEditForm({
                         ...editForm,
-                        totalCost: event.target.value,
+                        totalCost: cleanValue,
                         liters: (val / (fill.pricePerLiter || 1)).toFixed(2),
                       });
                     }}
                   />
                 </div>
+              </div>
+
+              <div className="history-edit-unit-card">
+                <span>Unit price</span>
+                <strong>
+                  {Number.isFinite(editPricePerLiter)
+                    ? editPricePerLiter.toFixed(2)
+                    : "0.00"}{" "}
+                  EGP/L
+                </strong>
               </div>
 
               <div>
@@ -336,7 +302,7 @@ export default function HistoryCardPremium({
               <div>
                 <Label>{t("notes")} ({t("optional")})</Label>
                 <textarea
-                  className="input-field min-h-[92px] w-full"
+                  className="input-field history-edit-textarea"
                   value={editForm.notes}
                   onChange={(event) =>
                     setEditForm({ ...editForm, notes: event.target.value })
@@ -346,39 +312,175 @@ export default function HistoryCardPremium({
 
               <button
                 type="button"
-                onClick={() => setShowPartialSlider(!showPartialSlider)}
+                onClick={() => setShowPartialSlider((current) => !current)}
                 className={cn(
-                  "premium-secondary-button w-full",
-                  showPartialSlider && "border-amber-500/30 text-amber-400",
+                  "history-partial-toggle",
+                  showPartialSlider && "active",
                 )}
               >
-                {showPartialSlider ? t("no_not_partial") : t("was_it_partial")}
+                {showPartialSlider ? "Mark as full tank" : "Set as partial fill-up"}
               </button>
 
-              {showPartialSlider && (
-                <div className="rounded-3xl border border-[var(--border-soft)] bg-[rgba(127,139,154,0.08)] p-4">
-                  <FuelGaugeSlider
-                    value={editForm.tankLevelAfter}
-                    onChange={(val) =>
-                      setEditForm({ ...editForm, tankLevelAfter: val })
-                    }
-                  />
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {showPartialSlider && (
+                  <MotionDiv
+                    className="history-edit-gauge-card"
+                    initial={{ opacity: 0, height: 0, y: -6 }}
+                    animate={{ opacity: 1, height: "auto", y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                  >
+                    <FuelGaugeSlider
+                      value={editForm.tankLevelAfter}
+                      onChange={(val) =>
+                        setEditForm({ ...editForm, tankLevelAfter: val })
+                      }
+                    />
+                  </MotionDiv>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <footer className="history-edit-footer">
+              <button type="button" onClick={handleSave}>
+                <Save className="h-5 w-5" />
+                {t("save")}
+              </button>
+            </footer>
+          </MotionDiv>
+        </MotionDiv>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <>
+      <article className="premium-history-card">
+        <button
+          type="button"
+          onClick={handleOpenEdit}
+          className="history-card-main-button"
+          aria-label="Edit history entry"
+        >
+          <div className="history-card-header">
+            <div className="history-card-title-row">
+              <span className="history-fuel-pill">P{fill.fuelType || "92"}</span>
+              <time>{format(new Date(fill.timestamp), "MMM d, yyyy")}</time>
+            </div>
+
+            <div className="history-card-time-row">
+              <span>{format(new Date(fill.timestamp), "h:mm a")}</span>
+              <ChevronRight className={cn("h-5 w-5", isRtl && "rotate-180")} />
             </div>
           </div>
-        </div>
-      </div>
 
-      <ConfirmModal
-        isOpen={deleteModal}
-        onClose={() => setDeleteModal(false)}
-        onConfirm={() => onDelete(fill.id)}
-        title={t("delete")}
-        message={t("delete") + "?"}
-        confirmText={t("delete")}
-        variant="danger"
-      />
+          <div className="history-card-amount-row">
+            <strong>{formatTo2Decimals(Number(tripCost)).toFixed(2)}</strong>
+            <span>{t("currency")}</span>
+          </div>
+
+          <div className="history-card-meta-row">
+            <span>
+              <CalendarDays className="h-4 w-4" />
+              {fill.odometer.toLocaleString()} km
+            </span>
+            <i />
+            <span>
+              <Fuel className="h-4 w-4" />
+              {fill.liters} {t("liters_abbr")}
+            </span>
+            <i />
+            <span>
+              <CircleDollarSign className="h-4 w-4" />
+              {fill.pricePerLiter} {t("unit_egp_l")}
+            </span>
+          </div>
+
+          <div className="history-card-metrics-panel">
+            <Metric
+              icon={Route}
+              value={index === 0 ? "-" : tripDistance}
+              unit={index === 0 ? "" : "km"}
+              label={t("distance")}
+            />
+            <Metric
+              icon={Gauge}
+              value={index === 0 ? "-" : kmPerLiter}
+              unit={index === 0 ? "" : "km/L"}
+              label="Avg. Efficiency"
+              valueClassName={cn(
+                index !== 0 &&
+                  getEfficiencyTextClass(kmPerLiterRaw, efficiencyThresholds),
+              )}
+            />
+            <Metric
+              icon={Droplet}
+              value={index === 0 ? "-" : litersPer100km}
+              unit={index === 0 ? "" : "L/100km"}
+              label="Consumption"
+            />
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className={cn("history-card-side-action", isRtl && "rtl")}
+          onClick={handleOpenEdit}
+          aria-label="Edit history entry"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+
+        {fill.notes && <p className="history-card-note">{fill.notes}</p>}
+      </article>
+
+      {typeof document !== "undefined" ? createPortal(editSheet, document.body) : editSheet}
+
+      {typeof document !== "undefined" ? createPortal(
+        <ConfirmModal
+          isOpen={deleteModal}
+          onClose={() => setDeleteModal(false)}
+          onConfirm={() => {
+            setDeleteModal(false);
+            setEditOpen(false);
+            onDelete(fill.id);
+          }}
+          title={t("delete")}
+          message={t("delete") + "?"}
+          confirmText={t("delete")}
+          variant="danger"
+        />,
+        document.body,
+      ) : (
+        <ConfirmModal
+          isOpen={deleteModal}
+          onClose={() => setDeleteModal(false)}
+          onConfirm={() => {
+            setDeleteModal(false);
+            setEditOpen(false);
+            onDelete(fill.id);
+          }}
+          title={t("delete")}
+          message={t("delete") + "?"}
+          confirmText={t("delete")}
+          variant="danger"
+        />
+      )}
+    </>
+  );
+}
+
+function Metric({ icon: Icon, value, unit, label, valueClassName }) {
+  return (
+    <div className="history-card-metric">
+      <Icon className="history-card-metric-icon" strokeWidth={1.75} />
+      <div>
+        <p className={cn("history-card-metric-value", valueClassName)}>
+          {value}
+          {unit && <span>{unit}</span>}
+        </p>
+        <small>{label}</small>
+      </div>
     </div>
   );
 }

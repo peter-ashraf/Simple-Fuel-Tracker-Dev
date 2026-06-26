@@ -44,6 +44,11 @@ import {
   preloadVehicleImageProcessing,
   processVehicleImage,
 } from "../utils/vehicleImageProcessing";
+import {
+  getVehicleImageRecords,
+  saveVehicleImageRecord,
+  updateVehicleImageRecord,
+} from "../utils/vehicleImageStore";
 import { Modal, cn } from "./ui";
 
 const getGreeting = () => {
@@ -65,6 +70,9 @@ const DEFAULT_VEHICLE_IMAGE_SETTINGS = {
   offsetX: 0,
   offsetY: 0,
   zoom: 1,
+  rotate: 0,
+  flipX: false,
+  flipY: false,
 };
 
 const MAX_SAVED_VEHICLE_IMAGES = 8;
@@ -102,6 +110,14 @@ const normalizeVehicleImageSettings = (settings = {}) => ({
     2.6,
     DEFAULT_VEHICLE_IMAGE_SETTINGS.zoom,
   ),
+  rotate: clampNumber(
+    settings.rotate ?? settings.rotation ?? DEFAULT_VEHICLE_IMAGE_SETTINGS.rotate,
+    -180,
+    180,
+    DEFAULT_VEHICLE_IMAGE_SETTINGS.rotate,
+  ),
+  flipX: Boolean(settings.flipX ?? settings.flipHorizontal ?? false),
+  flipY: Boolean(settings.flipY ?? settings.flipVertical ?? false),
 });
 
 const createVehicleImageEntryId = () =>
@@ -111,6 +127,16 @@ const getVehicleImageKey = (vehicleId) => `sft_vehicle_image_${vehicleId}`;
 const getVehicleImageSettingsKey = (vehicleId) => `sft_vehicle_image_settings_${vehicleId}`;
 const getVehicleImageActiveEntryKey = (vehicleId) => `sft_vehicle_image_active_${vehicleId}`;
 const getVehicleImageLibraryKey = (vehicleId) => `sft_vehicle_image_library_${vehicleId}`;
+
+const toVehicleImageLibraryItem = (entry) => {
+  const normalized = normalizeVehicleImageLibraryEntry(entry);
+  if (!normalized) return null;
+
+  return {
+    ...normalized,
+    dataUrl: entry.dataUrl,
+  };
+};
 
 const normalizeVehicleImageLibraryEntry = (entry, index = 0) => {
   const dataUrl = entry?.dataUrl || entry?.src || entry?.url;
@@ -145,45 +171,6 @@ const readStoredVehicleImageLibrary = (vehicleId) => {
   } catch {
     return [];
   }
-};
-
-const writeStoredVehicleImageLibrary = (vehicleId, library) => {
-  if (!vehicleId || typeof window === "undefined") return;
-
-  window.localStorage.setItem(
-    getVehicleImageLibraryKey(vehicleId),
-    JSON.stringify(library.slice(0, MAX_SAVED_VEHICLE_IMAGES)),
-  );
-};
-
-const upsertStoredVehicleImageLibraryEntry = (vehicleId, entry) => {
-  const normalized = normalizeVehicleImageLibraryEntry(entry);
-  if (!normalized) return readStoredVehicleImageLibrary(vehicleId);
-
-  const current = readStoredVehicleImageLibrary(vehicleId);
-  const next = [
-    normalized,
-    ...current.filter(
-      (item) => item.id !== normalized.id && item.dataUrl !== normalized.dataUrl,
-    ),
-  ].slice(0, MAX_SAVED_VEHICLE_IMAGES);
-
-  writeStoredVehicleImageLibrary(vehicleId, next);
-  return next;
-};
-
-const updateStoredVehicleImageLibraryEntry = (vehicleId, entryId, patch) => {
-  if (!entryId) return readStoredVehicleImageLibrary(vehicleId);
-
-  const current = readStoredVehicleImageLibrary(vehicleId);
-  const next = current.map((entry) =>
-    entry.id === entryId
-      ? normalizeVehicleImageLibraryEntry({ ...entry, ...patch }) || entry
-      : entry,
-  );
-
-  writeStoredVehicleImageLibrary(vehicleId, next);
-  return next;
 };
 
 const readStoredVehicleImageActiveEntryId = (vehicleId) => {
@@ -410,17 +397,93 @@ export default function DashboardPremium() {
 
   useEffect(() => {
     const vehicleId = selectedVehicleId || activeVehicle?.id;
-    const nextSettings = readStoredVehicleImageSettings(vehicleId);
+    let cancelled = false;
 
-    setStoredVehicleImage(readStoredVehicleImage(vehicleId));
-    setVehicleImageLibrary(readStoredVehicleImageLibrary(vehicleId));
-    setActiveVehicleImageEntryId(readStoredVehicleImageActiveEntryId(vehicleId));
-    setVehicleImageSettings(nextSettings);
-    setDraftVehicleImageSettings(nextSettings);
+    const loadVehicleImages = async () => {
+      const fallbackSettings = readStoredVehicleImageSettings(vehicleId);
+      const fallbackImage = readStoredVehicleImage(vehicleId);
+      const activeEntryId = readStoredVehicleImageActiveEntryId(vehicleId);
+
+      if (!vehicleId) {
+        setStoredVehicleImage(null);
+        setVehicleImageLibrary([]);
+        setActiveVehicleImageEntryId(null);
+        setVehicleImageSettings(DEFAULT_VEHICLE_IMAGE_SETTINGS);
+        setDraftVehicleImageSettings(DEFAULT_VEHICLE_IMAGE_SETTINGS);
+        return;
+      }
+
+      try {
+        let records = await getVehicleImageRecords(vehicleId);
+        const legacyLibrary = readStoredVehicleImageLibrary(vehicleId);
+        const legacyEntries = legacyLibrary.length
+          ? legacyLibrary
+          : fallbackImage
+            ? [
+                {
+                  id: activeEntryId || createVehicleImageEntryId(),
+                  dataUrl: fallbackImage,
+                  settings: fallbackSettings,
+                  backgroundRemoved: false,
+                  createdAt: new Date().toISOString(),
+                  originalName: "Saved vehicle photo",
+                },
+              ]
+            : [];
+
+        if (!records.length && legacyEntries.length) {
+          const migratedRecords = await Promise.all(
+            legacyEntries.slice(0, MAX_SAVED_VEHICLE_IMAGES).map(async (entry) => {
+              const migratedEntry = {
+                ...entry,
+                id: entry.id || createVehicleImageEntryId(),
+                vehicleId: String(vehicleId),
+                settings: normalizeVehicleImageSettings(entry.settings),
+              };
+
+              await saveVehicleImageRecord(migratedEntry);
+              return migratedEntry;
+            }),
+          );
+
+          records = migratedRecords;
+        }
+
+        const library = records
+          .map((record) => toVehicleImageLibraryItem(record))
+          .filter(Boolean);
+        const activeEntry =
+          library.find((entry) => entry.id === activeEntryId) || library[0] || null;
+
+        if (cancelled) return;
+
+        setVehicleImageLibrary(library);
+        setActiveVehicleImageEntryId(activeEntry?.id || null);
+        setStoredVehicleImage(activeEntry?.dataUrl || fallbackImage);
+        setVehicleImageSettings(activeEntry?.settings || fallbackSettings);
+        setDraftVehicleImageSettings(activeEntry?.settings || fallbackSettings);
+      } catch (error) {
+        console.warn("[Dashboard] Could not load saved vehicle images.", error);
+
+        if (cancelled) return;
+
+        setStoredVehicleImage(fallbackImage);
+        setVehicleImageLibrary(readStoredVehicleImageLibrary(vehicleId));
+        setActiveVehicleImageEntryId(activeEntryId);
+        setVehicleImageSettings(fallbackSettings);
+        setDraftVehicleImageSettings(fallbackSettings);
+      }
+    };
+
+    loadVehicleImages();
     setPhotoManagerOpen(false);
     setPhotoManagerView("menu");
     setImageAdjustOpen(false);
     setPositionConfirmOpen(false);
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeVehicle?.id, selectedVehicleId]);
 
   const firstName =
@@ -620,10 +683,10 @@ export default function DashboardPremium() {
     vehicleImageFileInputRef.current?.click();
   };
 
-  const persistActiveVehicleImage = (vehicleId, dataUrl, settings, entryId) => {
+  const persistActiveVehicleImage = (vehicleId, settings, entryId) => {
     if (!vehicleId || typeof window === "undefined") return;
 
-    window.localStorage.setItem(getVehicleImageKey(vehicleId), dataUrl);
+    window.localStorage.removeItem(getVehicleImageKey(vehicleId));
     writeStoredVehicleImageSettings(vehicleId, settings);
     writeStoredVehicleImageActiveEntryId(vehicleId, entryId);
   };
@@ -656,6 +719,7 @@ export default function DashboardPremium() {
       const defaultSettings = DEFAULT_VEHICLE_IMAGE_SETTINGS;
       const entry = {
         id: createVehicleImageEntryId(),
+        vehicleId: String(vehicleId),
         dataUrl: result.dataUrl,
         settings: defaultSettings,
         backgroundRemoved: result.backgroundRemoved,
@@ -666,31 +730,45 @@ export default function DashboardPremium() {
         0,
         MAX_SAVED_VEHICLE_IMAGES,
       );
+      let wasPersisted = false;
 
       try {
-        nextLibrary = upsertStoredVehicleImageLibraryEntry(vehicleId, entry);
-        persistActiveVehicleImage(vehicleId, result.dataUrl, defaultSettings, entry.id);
+        await saveVehicleImageRecord(entry);
+        wasPersisted = true;
+        nextLibrary = [
+          toVehicleImageLibraryItem(entry),
+          ...vehicleImageLibrary.filter((item) => item.id !== entry.id),
+        ]
+          .filter(Boolean)
+          .slice(0, MAX_SAVED_VEHICLE_IMAGES);
+        persistActiveVehicleImage(vehicleId, defaultSettings, entry.id);
       } catch (storageError) {
         console.warn("[Dashboard] Vehicle image could not be fully saved.", storageError);
+        showVehicleImageStatus({
+          type: "warning",
+          message: "Photo updated, but your browser could not save it for later.",
+        });
       }
 
       setVehicleImageLibrary(nextLibrary);
-      setActiveVehicleImageEntryId(entry.id);
+      setActiveVehicleImageEntryId(wasPersisted ? entry.id : null);
       setStoredVehicleImage(result.dataUrl);
       setVehicleImageSettings(defaultSettings);
       setDraftVehicleImageSettings(defaultSettings);
       setImageAdjustMode("upload");
       setImageAdjustOpen(true);
-      setVehicleImageStatus(
-        result.backgroundRemoved || !shouldRemoveBackground
-          ? { type: "success", message: "Vehicle photo updated" }
-          : {
-              type: "warning",
-              message:
-                result.warning ||
-                "Background removal failed, so the original image was saved instead.",
-            },
-      );
+      if (wasPersisted) {
+        setVehicleImageStatus(
+          result.backgroundRemoved || !shouldRemoveBackground
+            ? { type: "success", message: "Vehicle photo updated" }
+            : {
+                type: "warning",
+                message:
+                  result.warning ||
+                  "Background removal failed, so the original image was saved instead.",
+              },
+        );
+      }
     } catch (error) {
       console.error("[Dashboard] Vehicle image upload failed.", error);
       setVehicleImageStatus({ type: "error", message: "Could not process this photo" });
@@ -706,12 +784,7 @@ export default function DashboardPremium() {
     if (!normalizedEntry || !vehicleId) return;
 
     try {
-      persistActiveVehicleImage(
-        vehicleId,
-        normalizedEntry.dataUrl,
-        normalizedEntry.settings,
-        normalizedEntry.id,
-      );
+      persistActiveVehicleImage(vehicleId, normalizedEntry.settings, normalizedEntry.id);
     } catch (storageError) {
       console.warn("[Dashboard] Could not persist selected vehicle image.", storageError);
     }
@@ -781,7 +854,7 @@ export default function DashboardPremium() {
     });
   };
 
-  const persistVehicleImageSettings = (
+  const persistVehicleImageSettings = async (
     settings,
     { updateLibrary = false, message = "Image position saved" } = {},
   ) => {
@@ -796,12 +869,16 @@ export default function DashboardPremium() {
 
       if (updateLibrary && activeVehicleImageEntryId) {
         try {
-          const nextLibrary = updateStoredVehicleImageLibraryEntry(
-            vehicleId,
-            activeVehicleImageEntryId,
-            { settings: normalized },
+          await updateVehicleImageRecord(activeVehicleImageEntryId, {
+            settings: normalized,
+          });
+          setVehicleImageLibrary((current) =>
+            current.map((entry) =>
+              entry.id === activeVehicleImageEntryId
+                ? { ...entry, settings: normalized }
+                : entry,
+            ),
           );
-          setVehicleImageLibrary(nextLibrary);
         } catch (storageError) {
           console.warn("[Dashboard] Could not save vehicle image position.", storageError);
         }
@@ -875,6 +952,9 @@ export default function DashboardPremium() {
               imageOffsetX={activeImageSettings.offsetX}
               imageOffsetY={activeImageSettings.offsetY}
               imageZoom={activeVehicleImageZoom}
+              imageRotate={activeImageSettings.rotate}
+              imageFlipX={activeImageSettings.flipX}
+              imageFlipY={activeImageSettings.flipY}
             />
           </div>
 
@@ -1081,6 +1161,9 @@ export default function DashboardPremium() {
                           imageOffsetX={entry.settings.offsetX}
                           imageOffsetY={entry.settings.offsetY}
                           imageZoom={entry.settings.zoom}
+                          imageRotate={entry.settings.rotate}
+                          imageFlipX={entry.settings.flipX}
+                          imageFlipY={entry.settings.flipY}
                         />
                       </span>
                       <span className="dashboard-image-library-meta">
@@ -1186,6 +1269,9 @@ export default function DashboardPremium() {
               imageOffsetX={draftVehicleImageSettings.offsetX}
               imageOffsetY={draftVehicleImageSettings.offsetY}
               imageZoom={draftVehicleImageSettings.zoom}
+              imageRotate={draftVehicleImageSettings.rotate}
+              imageFlipX={draftVehicleImageSettings.flipX}
+              imageFlipY={draftVehicleImageSettings.flipY}
             />
           </div>
 
@@ -1231,6 +1317,45 @@ export default function DashboardPremium() {
                 }
               />
             </label>
+
+            <label className="dashboard-image-adjust-control">
+              <span>Rotate <strong>{Math.round(draftVehicleImageSettings.rotate)} deg</strong></span>
+              <input
+                type="range"
+                min="-180"
+                max="180"
+                step="1"
+                value={draftVehicleImageSettings.rotate}
+                onChange={(event) =>
+                  updateDraftVehicleImageSettings({ rotate: event.target.value })
+                }
+              />
+            </label>
+
+            <div className="dashboard-image-flip-controls">
+              <button
+                type="button"
+                className={draftVehicleImageSettings.flipX ? "active" : ""}
+                onClick={() =>
+                  updateDraftVehicleImageSettings({
+                    flipX: !draftVehicleImageSettings.flipX,
+                  })
+                }
+              >
+                Flip horizontal
+              </button>
+              <button
+                type="button"
+                className={draftVehicleImageSettings.flipY ? "active" : ""}
+                onClick={() =>
+                  updateDraftVehicleImageSettings({
+                    flipY: !draftVehicleImageSettings.flipY,
+                  })
+                }
+              >
+                Flip vertical
+              </button>
+            </div>
           </div>
 
           <div className="dashboard-image-adjust-actions">

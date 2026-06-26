@@ -534,6 +534,10 @@ export default function App() {
   const primaryRoutes = ["/", "/history", "/add", "/analytics", "/settings"];
   const isPrimaryRoute = primaryRoutes.includes(location.pathname);
   const isDashboardRoute = location.pathname === "/";
+  const isFillUpRoute = location.pathname === "/add";
+  const isHistoryRoute = location.pathname === "/history";
+  const isAnalyticsRoute = location.pathname === "/analytics";
+  const isSettingsRoute = location.pathname === "/settings";
   const showLegacyHeader = !isPrimaryRoute;
   const showBottomNav =
     location.pathname !== "/add" &&
@@ -544,7 +548,17 @@ export default function App() {
     <div
       className={cn(
         "app-shell mx-auto relative overflow-hidden flex flex-col transition-colors duration-300",
-        isDashboardRoute ? "dashboard-app-shell" : "max-w-lg",
+        isDashboardRoute
+          ? "dashboard-app-shell"
+          : isFillUpRoute
+            ? "fillup-app-shell"
+            : isHistoryRoute
+              ? "history-app-shell"
+              : isAnalyticsRoute
+                ? "analytics-app-shell"
+                : isSettingsRoute
+                  ? "settings-app-shell"
+                  : "max-w-lg",
       )}
     >
       {showLegacyHeader && <Header />}
@@ -564,12 +578,30 @@ export default function App() {
       <main
         className={cn(
           "flex-1 min-h-0 overscroll-contain",
-          isDashboardRoute ? "dashboard-route-main overflow-hidden p-0" : "overflow-y-auto px-4",
+          isDashboardRoute
+            ? "dashboard-route-main overflow-hidden p-0"
+            : isFillUpRoute
+              ? "fillup-route-main overflow-y-auto p-0"
+              : isHistoryRoute
+                ? "history-route-main overflow-hidden p-0"
+                : isAnalyticsRoute
+                  ? "analytics-route-main overflow-hidden p-0"
+                  : isSettingsRoute
+                    ? "settings-route-main overflow-hidden p-0"
+                    : "overflow-y-auto px-4",
           !isDashboardRoute &&
+            !isFillUpRoute &&
+            !isHistoryRoute &&
+            !isAnalyticsRoute &&
+            !isSettingsRoute &&
+            !isSettingsRoute &&
             (showLegacyHeader
               ? "pt-[calc(5rem+env(safe-area-inset-top))]"
               : "pt-[calc(2.5rem+env(safe-area-inset-top))]"),
           !isDashboardRoute &&
+            !isFillUpRoute &&
+            !isHistoryRoute &&
+            !isAnalyticsRoute &&
             (showBottomNav
               ? "pb-[calc(7rem+env(safe-area-inset-bottom))]"
               : "pb-[calc(2.5rem+env(safe-area-inset-bottom))]"),

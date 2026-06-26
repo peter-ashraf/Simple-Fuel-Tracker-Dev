@@ -132,6 +132,9 @@ export function VehicleArt({
   imageOffsetY = 0,
   objectPosition = "center center",
   imageZoom = 1,
+  imageRotate = 0,
+  imageFlipX = false,
+  imageFlipY = false,
 }) {
   const candidates = [src, ...fallbackSrcs].filter(Boolean);
   const [candidateIndex, setCandidateIndex] = useState(0);
@@ -146,6 +149,11 @@ export function VehicleArt({
   const safeOffsetY = Number.isFinite(Number(imageOffsetY))
     ? Math.min(Math.max(Number(imageOffsetY), -140), 140)
     : 0;
+  const safeRotate = Number.isFinite(Number(imageRotate))
+    ? Math.min(Math.max(Number(imageRotate), -180), 180)
+    : 0;
+  const safeScaleX = safeZoom * (imageFlipX ? -1 : 1);
+  const safeScaleY = safeZoom * (imageFlipY ? -1 : 1);
 
   return (
     <div
@@ -172,6 +180,9 @@ export function VehicleArt({
               "--vehicle-image-x": `${safeOffsetX}px`,
               "--vehicle-image-y": `${safeOffsetY}px`,
               "--vehicle-image-zoom": safeZoom,
+              "--vehicle-image-rotate": `${safeRotate}deg`,
+              "--vehicle-image-scale-x": safeScaleX,
+              "--vehicle-image-scale-y": safeScaleY,
               "--vehicle-object-position": objectPosition,
               objectPosition,
               "--vehicle-photo-scale": safeZoom,

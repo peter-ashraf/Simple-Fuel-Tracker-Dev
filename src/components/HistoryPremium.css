@@ -1,0 +1,294 @@
+/* =========================================================
+   HistoryPremium.css
+   Component-owned History layout.
+   The header + vehicle selector + summary stay fixed.
+   Only the trip list scrolls underneath.
+   ========================================================= */
+
+.history-route-main {
+  overflow: hidden !important;
+  min-height: 0 !important;
+}
+
+.history-app-shell {
+  overflow: hidden !important;
+}
+
+.history-premium-screen {
+  --history-side-padding: 14px;
+  --history-fixed-zone-height: calc(174px + env(safe-area-inset-top));
+  position: relative !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+.history-premium-content {
+  position: relative !important;
+  width: min(100%, 430px) !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 auto !important;
+  padding: 0 var(--history-side-padding) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.history-fixed-zone {
+  position: fixed !important;
+  inset-block-start: 0 !important;
+  inset-inline-start: 50% !important;
+  z-index: 80 !important;
+  width: min(100%, 430px) !important;
+  height: var(--history-fixed-zone-height) !important;
+  max-height: var(--history-fixed-zone-height) !important;
+  transform: translateX(-50%) !important;
+  display: grid !important;
+  grid-template-rows: auto auto !important;
+  align-content: start !important;
+  gap: 10px !important;
+  padding: calc(12px + env(safe-area-inset-top)) var(--history-side-padding) 10px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  background:
+    linear-gradient(180deg, rgba(2, 7, 13, 1) 0%, rgba(2, 7, 13, 0.98) 70%, rgba(2, 7, 13, 0.84) 88%, rgba(2, 7, 13, 0) 100%) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.history-fixed-zone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 84% 6%, rgba(32, 230, 183, 0.08), transparent 170px),
+    radial-gradient(circle at 10% 0%, rgba(35, 183, 255, 0.08), transparent 180px),
+    linear-gradient(180deg, rgba(2, 7, 13, 0.98), rgba(2, 7, 13, 0.88) 76%, rgba(2, 7, 13, 0));
+}
+
+.history-topbar {
+  position: relative !important;
+  top: auto !important;
+  z-index: 2 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.history-title-block {
+  display: grid !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.history-title-block h1 {
+  margin: 0 !important;
+  font-size: clamp(24px, 6.2vw, 28px) !important;
+  font-weight: 620 !important;
+  letter-spacing: -0.052em !important;
+  line-height: 0.98 !important;
+}
+
+.history-filter-button {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  border-radius: 17px !important;
+}
+
+.history-filter-button svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.history-vehicle-trigger {
+  min-height: 34px !important;
+  padding: 3px 10px 3px 5px !important;
+  gap: 8px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+}
+
+.history-vehicle-trigger .history-vehicle-thumb {
+  width: 45px !important;
+  height: 22px !important;
+  border-radius: 999px !important;
+}
+
+.history-vehicle-menu {
+  top: calc(100% + 8px) !important;
+  width: min(246px, calc(100vw - 36px)) !important;
+  padding: 7px !important;
+  border-radius: 19px !important;
+}
+
+.history-vehicle-menu-item {
+  min-height: 52px !important;
+  padding: 7px 10px !important;
+  gap: 10px !important;
+  border-radius: 15px !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+}
+
+.history-vehicle-menu-item .history-vehicle-thumb {
+  width: 54px !important;
+  height: 27px !important;
+  border-radius: 999px !important;
+}
+
+.history-summary-card {
+  position: relative !important;
+  z-index: 1 !important;
+  min-height: 76px !important;
+  max-height: 76px !important;
+  margin: 0 !important;
+  padding: 9px 10px !important;
+  border-radius: 20px !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: center !important;
+  column-gap: 0 !important;
+  overflow: hidden !important;
+}
+
+.history-summary-metric {
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: 31px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding-inline: 7px !important;
+}
+
+.history-summary-metric + .history-summary-metric {
+  border-left: 1px solid rgba(120, 210, 220, 0.15) !important;
+}
+
+.history-summary-icon {
+  width: 29px !important;
+  height: 29px !important;
+  border-radius: 12px !important;
+}
+
+.history-summary-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+  stroke-width: 1.7 !important;
+}
+
+.history-summary-copy {
+  min-width: 0 !important;
+  display: block !important;
+}
+
+.history-summary-copy p,
+.history-summary-copy small {
+  margin: 0 !important;
+  font-size: 8.2px !important;
+  line-height: 1.06 !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.015em !important;
+  white-space: normal !important;
+}
+
+.history-summary-copy strong {
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 3px !important;
+  margin-top: 4px !important;
+  font-size: clamp(15px, 3.9vw, 18px) !important;
+  line-height: 0.96 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.045em !important;
+  white-space: nowrap !important;
+}
+
+.history-summary-copy strong span {
+  font-size: 8px !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.history-summary-copy small {
+  display: block !important;
+  margin-top: 3px !important;
+}
+
+.history-scroll-zone {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  padding: var(--history-fixed-zone-height) 0 calc(106px + env(safe-area-inset-bottom)) !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.history-list {
+  display: grid !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.history-empty-card {
+  margin-top: 10px !important;
+}
+
+@media (max-width: 395px) {
+  .history-premium-screen {
+    --history-side-padding: 12px;
+    --history-fixed-zone-height: calc(170px + env(safe-area-inset-top));
+  }
+
+  .history-summary-card {
+    min-height: 74px !important;
+    max-height: 74px !important;
+    padding: 8px 8px !important;
+  }
+
+  .history-summary-metric {
+    grid-template-columns: 28px minmax(0, 1fr) !important;
+    gap: 6px !important;
+    padding-inline: 5px !important;
+  }
+
+  .history-summary-icon {
+    width: 27px !important;
+    height: 27px !important;
+  }
+
+  .history-summary-icon svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
+
+  .history-summary-copy p,
+  .history-summary-copy small {
+    font-size: 7.8px !important;
+  }
+
+  .history-summary-copy strong {
+    font-size: 15px !important;
+  }
+}

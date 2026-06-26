@@ -2,11 +2,15 @@ import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useFuel } from "../hooks/useFuelContext";
 import { useTheme } from "../hooks/useTheme";
+import { getVehicleImageRecords } from "../utils/vehicleImageStore";
 import { Card, Input, Label, cn, Modal, ConfirmModal, PageWrapper } from "./ui";
 import {
   Bell as LucideBell,
   Camera,
   CarFront,
+  ChevronDown,
+  ChevronRight,
+  BarChart3,
   CircleHelp,
   Fuel as LucideFuel,
   Heart,
@@ -14,6 +18,7 @@ import {
   Lock,
   Ruler,
   UserRound,
+  X,
 } from "lucide-react";
 import {
   GlassCard,
@@ -58,6 +63,7 @@ import { useNotifications } from "../hooks/useNotifications";
 import { useTranslation } from "react-i18next";
 import { authService } from "../services/authService";
 import { refreshLocalStorageState } from "../hooks/useLocalStorage";
+import "./Settings.css";
 
 const MotionDiv = motion.div;
 const MIN_APP_UPDATE_CHECK_MS = 900;
@@ -102,6 +108,159 @@ const parseMaintenanceDescription = (description) => {
   } catch {
     return { notes: description, interval: null, safety: null };
   }
+};
+
+
+const getSettingsDefaultVehicleImage = () => {
+  const base = import.meta.env.BASE_URL || "/";
+  return `${base.endsWith("/") ? base : `${base}/`}vehicle-images/vehicle-hero-default.png`;
+};
+
+const normalizeSettingsImageValue = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (
+      trimmed.startsWith("data:image/") ||
+      trimmed.startsWith("blob:") ||
+      trimmed.startsWith("http") ||
+      trimmed.startsWith("/")
+    ) {
+      return trimmed;
+    }
+
+    try {
+      return normalizeSettingsImageValue(JSON.parse(trimmed));
+    } catch {
+      return trimmed;
+    }
+  }
+
+  if (typeof value === "object") {
+    return (
+      value.dataUrl ||
+      value.src ||
+      value.url ||
+      value.image ||
+      value.photo ||
+      value.heroImageUrl ||
+      value.hero_image_url ||
+      value.vehicleImageUrl ||
+      value.vehicle_image_url ||
+      null
+    );
+  }
+
+  return null;
+};
+
+const getSettingsVehicleLookupIds = (vehicle) => {
+  if (!vehicle) return [];
+  return [
+    vehicle.id,
+    vehicle.stableId,
+    vehicle.stable_id,
+    vehicle.stableKey,
+    vehicle.stable_key,
+  ]
+    .filter(Boolean)
+    .map(String);
+};
+
+const getSettingsVehicleObjectImage = (vehicle) =>
+  normalizeSettingsImageValue(
+    vehicle?.heroImageUrl ||
+      vehicle?.hero_image_url ||
+      vehicle?.imageUrl ||
+      vehicle?.image_url ||
+      vehicle?.photoUrl ||
+      vehicle?.photo_url ||
+      vehicle?.vehicleImageUrl ||
+      vehicle?.vehicle_image_url ||
+      vehicle?.heroImage ||
+      vehicle?.vehicleImage ||
+      vehicle?.image ||
+      vehicle?.photo,
+  );
+
+const getSettingsStoredVehicleImage = (vehicle) => {
+  if (!vehicle || typeof window === "undefined") return null;
+
+  const ids = getSettingsVehicleLookupIds(vehicle);
+  const directKeys = ids.flatMap((id) => [
+    `sft_vehicle_image_${id}`,
+    `vehicle_image_${id}`,
+    `vehicleHeroImage:${id}`,
+    `vehicle-image-${id}`,
+  ]);
+
+  for (const key of directKeys) {
+    const value = normalizeSettingsImageValue(window.localStorage.getItem(key));
+    if (value) return value;
+  }
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const storageKey = window.localStorage.key(index);
+    if (!storageKey) continue;
+    if (!directKeys.some((key) => storageKey === key || storageKey.endsWith(key))) continue;
+    const value = normalizeSettingsImageValue(window.localStorage.getItem(storageKey));
+    if (value) return value;
+  }
+
+  for (const key of ["sft_vehicle_images", "vehicle_images"]) {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(key) || "{}");
+      for (const id of ids) {
+        const value = normalizeSettingsImageValue(parsed?.[id]);
+        if (value) return value;
+      }
+    } catch {
+      // Ignore legacy malformed values.
+    }
+  }
+
+  return null;
+};
+
+const getSettingsVehicleImageActiveEntryKey = (vehicleId) => `sft_vehicle_image_active_${vehicleId}`;
+
+const getStoredSettingsVehicleImageActiveEntryId = (vehicleId) => {
+  if (!vehicleId || typeof window === "undefined") return null;
+
+  const key = getSettingsVehicleImageActiveEntryKey(vehicleId);
+  const direct = window.localStorage.getItem(key);
+  if (direct) return direct;
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const storageKey = window.localStorage.key(index);
+    if (!storageKey || (!storageKey.endsWith(key) && storageKey !== key)) continue;
+    const value = window.localStorage.getItem(storageKey);
+    if (value) return value;
+  }
+
+  return null;
+};
+
+const getIndexedSettingsVehicleImage = async (vehicle) => {
+  const ids = getSettingsVehicleLookupIds(vehicle);
+
+  for (const id of ids) {
+    try {
+      const records = await getVehicleImageRecords(id);
+      if (!records?.length) continue;
+
+      const activeEntryId = getStoredSettingsVehicleImageActiveEntryId(id);
+      const activeRecord =
+        records.find((record) => record.id === activeEntryId) || records[0];
+      const dataUrl = normalizeSettingsImageValue(activeRecord?.dataUrl);
+      if (dataUrl) return dataUrl;
+    } catch (error) {
+      console.warn("[Settings] Could not load active vehicle image.", error);
+    }
+  }
+
+  return null;
 };
 
 export default function Settings() {
@@ -250,6 +409,42 @@ export default function Settings() {
   });
   const [activeSettingsSection, setActiveSettingsSection] = useState(null);
   const [activeSettingsTitle, setActiveSettingsTitle] = useState("");
+  const [activeVehicleImage, setActiveVehicleImage] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadActiveVehicleImage = async () => {
+      if (!activeVehicle) {
+        setActiveVehicleImage(null);
+        return;
+      }
+
+      const indexedImage = await getIndexedSettingsVehicleImage(activeVehicle);
+      const image =
+        indexedImage ||
+        getSettingsStoredVehicleImage(activeVehicle) ||
+        getSettingsVehicleObjectImage(activeVehicle) ||
+        null;
+
+      if (!cancelled) setActiveVehicleImage(image);
+    };
+
+    loadActiveVehicleImage();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", loadActiveVehicleImage);
+      window.addEventListener("focus", loadActiveVehicleImage);
+    }
+
+    return () => {
+      cancelled = true;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("storage", loadActiveVehicleImage);
+        window.removeEventListener("focus", loadActiveVehicleImage);
+      }
+    };
+  }, [activeVehicle]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -888,13 +1083,19 @@ export default function Settings() {
     profileUsername && profileUsername !== "dev-local"
       ? profileUsername
       : "peter.ashraf16";
+  const profileVehicleName = activeVehicle?.name || "Vehicle";
+  const profileVehicleImage =
+    activeVehicleImage ||
+    getSettingsStoredVehicleImage(activeVehicle) ||
+    getSettingsVehicleObjectImage(activeVehicle) ||
+    getSettingsDefaultVehicleImage();
   const settingsRows = [
     {
       title: "My Profile",
       subtitle: "Personal information and account",
       section: "account",
       icon: UserRound,
-      tone: "teal",
+      tone: "green",
     },
     {
       title: "My Vehicles",
@@ -905,45 +1106,45 @@ export default function Settings() {
     },
     {
       title: "Fuel Preferences",
-      subtitle: "Fuel types, prices and efficiency",
+      subtitle: "Fuel types, prices & efficiency",
       section: "fuel",
       icon: LucideFuel,
-      tone: "amber",
+      tone: "orange",
     },
     {
       title: "Reminders",
       subtitle: "Set alerts and notifications",
-      section: "app",
+      section: "reminders",
       icon: LucideBell,
       tone: "purple",
     },
     {
       title: "Units & Display",
       subtitle: "Customize units and appearance",
-      section: "app",
-      icon: Ruler,
+      section: "display",
+      icon: BarChart3,
       tone: "teal",
     },
     {
       title: "Privacy",
       subtitle: "Manage your data and privacy",
-      section: "cloud",
+      section: "privacy",
       icon: Lock,
       tone: "blue",
     },
     {
       title: "Help & Support",
       subtitle: "FAQs, contact us and troubleshooting",
-      section: "app",
+      section: "support",
       icon: CircleHelp,
-      tone: "purple",
+      tone: "violet",
     },
     {
       title: "About Simple Fuel Tracker",
       subtitle: "App info, terms and policies",
-      section: "app",
+      section: "about",
       icon: Info,
-      tone: "teal",
+      tone: "green",
     },
   ];
   const openSettingsPanel = (row) => {
@@ -956,107 +1157,284 @@ export default function Settings() {
   };
 
   return (
-    <PageWrapper className="space-y-6 pb-8">
-      <ScreenHeader
-        title={t("settings")}
-        action={
-          <button type="button" className="icon-button" aria-label={t("notifications")}>
-            <LucideBell className="h-5 w-5" strokeWidth={1.9} />
-          </button>
-        }
-      />
+    <div className="settings-premium-screen">
+      <div className="settings-fixed-zone">
+        <header className="settings-page-header" aria-label="Settings header">
+          <h1>{t("settings") || "Settings"}</h1>
+        </header>
 
-      <GlassCard className="grid min-h-[150px] overflow-hidden p-0 min-[430px]:grid-cols-[0.58fr_0.42fr]">
-        <div className="z-10 flex items-center gap-4 p-4">
-          <div className="relative">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.13)] text-[var(--accent-primary)] shadow-[var(--shadow-glow)]">
-              <UserRound className="h-10 w-10" strokeWidth={1.8} />
+        <section className="settings-profile-hero" aria-label="Profile summary">
+          <div className="settings-profile-avatar-wrap">
+            <div className="settings-profile-avatar" aria-hidden="true">
+              <div className="settings-avatar-face">
+                <span className="settings-avatar-hair" />
+                <span className="settings-avatar-head" />
+                <span className="settings-avatar-neck" />
+                <span className="settings-avatar-shirt" />
+              </div>
             </div>
-            <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-medium)] bg-[var(--bg-glass-strong)] text-[var(--text-primary)]">
-              <Camera className="h-4 w-4" strokeWidth={1.9} />
-            </span>
+            <button
+              type="button"
+              className="settings-avatar-camera"
+              aria-label="Change profile photo"
+              onClick={() => openSettingsPanel(settingsRows[0])}
+            >
+              <Camera className="h-4 w-4" strokeWidth={2} />
+            </button>
           </div>
-          <div className="min-w-0">
-            <h2 className="truncate text-2xl font-black text-[var(--text-primary)]">
-              {profileName}
-            </h2>
-            <p className="mt-1 truncate text-sm font-semibold text-[var(--text-secondary)]">
-              {profileHandle}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
-              <span className="inline-flex items-center gap-2">
-                <CarFront className="h-4 w-4" strokeWidth={1.9} />
-                {activeVehicle?.name || t("select_vehicle")}
-              </span>
-              <span className="rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.12)] px-3 py-1 text-xs text-[var(--accent-primary)]">
-                Active
-              </span>
+
+          <div className="settings-profile-copy">
+            <h2>{profileName}</h2>
+            <p>{profileHandle}</p>
+            <div className="settings-profile-vehicle-line">
+              <CarFront className="h-4 w-4" strokeWidth={1.8} />
+              <span>{profileVehicleName}</span>
+              <strong>Active</strong>
             </div>
           </div>
-        </div>
-        <VehicleArt className="hidden min-[430px]:block" />
-      </GlassCard>
 
-      <GlassCard className="overflow-hidden p-4">
-        {settingsRows.map((row) => (
-          <SettingsRow
-            key={row.title}
-            icon={row.icon}
-            title={row.title}
-            subtitle={row.subtitle}
-            tone={row.tone}
-            active={
-              activeSettingsSection === row.section &&
-              activeSettingsTitle === row.title
-            }
-            onClick={() => openSettingsPanel(row)}
-          />
-        ))}
-      </GlassCard>
+          <div className="settings-profile-car" aria-hidden="true">
+            <VehicleArt
+              src={profileVehicleImage}
+              alt={profileVehicleName}
+              objectPosition="center right"
+              imageZoom={1.1}
+              className="settings-profile-car-art"
+            />
+          </div>
+        </section>
+      </div>
 
-      <GlassCard className="flex items-center justify-between gap-4 p-5">
-        <div className="min-w-0">
-          <h3 className="text-xl font-black text-[var(--text-primary)]">
-            You're all set!
-          </h3>
-          <p className="mt-1 text-base font-semibold text-[var(--text-secondary)]">
-            We'll help you save more every day.
-          </p>
-        </div>
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.13)] text-[var(--accent-primary)]">
-          <Heart className="h-8 w-8" strokeWidth={1.9} />
-        </div>
-      </GlassCard>
+      <div className="settings-premium-scroll">
+        <section className="settings-menu-card" aria-label="Settings sections">
+          {settingsRows.map((row) => {
+            const RowIcon = row.icon;
+            return (
+              <button
+                key={row.title}
+                type="button"
+                className="settings-menu-row"
+                onClick={() => openSettingsPanel(row)}
+              >
+                <span className={`settings-menu-icon settings-menu-icon-${row.tone}`} aria-hidden="true">
+                  <RowIcon className="h-6 w-6" strokeWidth={1.85} />
+                </span>
+                <span className="settings-menu-copy">
+                  <span className="settings-menu-label">{row.title}</span>
+                  <span className="settings-menu-subtitle">{row.subtitle}</span>
+                </span>
+                <ChevronRight className="settings-menu-chevron" strokeWidth={2} />
+              </button>
+            );
+          })}
+        </section>
 
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="flex w-full items-center gap-4 rounded-[var(--radius-xl)] border border-red-500/20 bg-red-500/10 p-5 text-start text-red-300 shadow-[var(--shadow-card)]"
-      >
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10">
-          <SignOut weight="duotone" className="h-5 w-5" />
-        </span>
-        <span>
-          <span className="block text-lg font-black">{t("logout")}</span>
-          <span className="mt-1 block text-sm font-semibold text-red-300/75">
-            Sign out from your account
+        <section className="settings-eco-card" aria-label="Savings encouragement">
+          <div className="settings-plant-art" aria-hidden="true">
+            <span className="settings-leaf settings-leaf-1" />
+            <span className="settings-leaf settings-leaf-2" />
+            <span className="settings-leaf settings-leaf-3" />
+            <span className="settings-leaf settings-leaf-4" />
+            <span className="settings-stem" />
+            <span className="settings-pot" />
+          </div>
+          <div className="settings-eco-copy">
+            <h3>You&apos;re all set!</h3>
+            <p>We&apos;ll help you save more every day.</p>
+          </div>
+          <span className="settings-eco-heart-wrap" aria-hidden="true">
+            <Heart className="settings-eco-heart" strokeWidth={2.4} />
           </span>
-        </span>
-      </button>
+        </section>
 
-      <Modal
-        isOpen={Boolean(activeSettingsSection)}
-        onClose={closeSettingsPanel}
-        title={activeSettingsTitle || t("settings")}
-        size="lg"
-      >
-      <MotionDiv
-        key={`${activeSettingsSection}-${activeSettingsTitle}`}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.18 }}
-        className="max-h-[70vh] space-y-4 overflow-y-auto pr-1"
-      >
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="settings-logout-button"
+        >
+          <span className="settings-logout-icon" aria-hidden="true">
+            <SignOut size={22} weight="bold" />
+          </span>
+          <span className="settings-logout-copy">
+            <span>{t("logout") || "Logout"}</span>
+            <small>Sign out from your account</small>
+          </span>
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {Boolean(activeSettingsSection) && (
+          <div className="settings-sheet-layer" role="presentation">
+            <MotionDiv
+              className="settings-sheet-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              onClick={closeSettingsPanel}
+            />
+            <MotionDiv
+              className="settings-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label={activeSettingsTitle || t("settings")}
+              initial={{ opacity: 0, y: 32, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.985 }}
+              transition={{ type: "spring", stiffness: 420, damping: 34 }}
+            >
+              <div className="settings-sheet-header">
+                <h2>{activeSettingsTitle || t("settings")}</h2>
+                <button
+                  type="button"
+                  className="settings-sheet-close"
+                  onClick={closeSettingsPanel}
+                  aria-label={t("close") || "Close"}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <MotionDiv
+                key={`${activeSettingsSection}-${activeSettingsTitle}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.18 }}
+                className="settings-sheet-body"
+              >
+
+      {activeSettingsSection === "reminders" && (
+        <section className="settings-panel-stack">
+          <div className="settings-panel-card">
+            <div className="settings-panel-row no-border">
+              <span className="settings-panel-icon amber"><LucideBell className="h-4 w-4" strokeWidth={1.8} /></span>
+              <div className="settings-panel-copy">
+                <h3>{t("app_notifications") || "App notifications"}</h3>
+                <p>{notificationsEnabled ? t("app_notifications_enabled") : t("app_notifications_disabled")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notificationsEnabled}
+                onClick={handleToggleNotifications}
+                className={cn("settings-switch", notificationsEnabled && "is-on")}
+              >
+                <span />
+              </button>
+            </div>
+            {notificationError && <p className="settings-panel-warning">{notificationError}</p>}
+            {!isNotificationSupported && <p className="settings-panel-warning">This browser does not support notifications.</p>}
+            <p className="settings-panel-note">Permission: {permissionState || "default"}</p>
+          </div>
+        </section>
+      )}
+
+      {activeSettingsSection === "display" && (
+        <section className="settings-panel-stack">
+          <div className="settings-panel-card">
+            <h3 className="settings-panel-title">Theme</h3>
+            <div className="settings-segmented-control">
+              {["light", "dark", "system"].map((themeOption) => (
+                <button
+                  key={themeOption}
+                  type="button"
+                  className={cn("settings-segment", theme === themeOption && "is-active")}
+                  onClick={() => {
+                    setTheme(themeOption);
+                    showToast(t("updated") || "Updated");
+                  }}
+                >
+                  {themeOption === "system" ? t("system_mode") : themeOption === "dark" ? t("dark_mode") : t("light_mode")}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="settings-panel-card">
+            <h3 className="settings-panel-title">Language</h3>
+            <div className="settings-segmented-control">
+              {[
+                { id: "en", label: t("english") || "English" },
+                { id: "ar", label: t("arabic") || "Arabic" },
+              ].map((lang) => (
+                <button
+                  key={lang.id}
+                  type="button"
+                  className={cn("settings-segment", currentLanguage === lang.id && "is-active")}
+                  onClick={() => {
+                    i18n.changeLanguage(lang.id);
+                    showToast(t("updated") || "Updated");
+                  }}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeSettingsSection === "privacy" && (
+        <section className="settings-panel-stack">
+          <div className="settings-panel-card">
+            <h3 className="settings-panel-title">Backup & restore</h3>
+            <div className="settings-action-grid">
+              <button type="button" onClick={() => setFormatModal({ isOpen: true, type: "export" })}>
+                <DownloadSimple weight="duotone" className="h-4 w-4" /> Export
+              </button>
+              <button type="button" onClick={() => setFormatModal({ isOpen: true, type: "import" })}>
+                <UploadSimple weight="duotone" className="h-4 w-4" /> Import
+              </button>
+            </div>
+            <button type="button" className="settings-primary-action" onClick={handleOpenManualSync}>
+              <CloudArrowUp weight="duotone" className="h-4 w-4" /> Manual Sync
+            </button>
+            <button type="button" className="settings-secondary-action" onClick={() => setCloudRestoreOpen(true)}>
+              Cloud Restore
+            </button>
+          </div>
+          <div className="settings-panel-card danger">
+            <h3 className="settings-panel-title">Danger Zone</h3>
+            <button type="button" className="settings-danger-action" onClick={() => setFactoryResetModal(true)}>
+              Reset app
+            </button>
+          </div>
+        </section>
+      )}
+
+      {activeSettingsSection === "support" && (
+        <section className="settings-panel-stack">
+          <div className="settings-panel-card">
+            <div className="settings-panel-row">
+              <span className="settings-panel-icon purple"><CircleHelp className="h-4 w-4" strokeWidth={1.8} /></span>
+              <div className="settings-panel-copy">
+                <h3>Help & Support</h3>
+                <p>Quick troubleshooting and app maintenance tools.</p>
+              </div>
+            </div>
+            <button type="button" className="settings-secondary-action" onClick={handleManualAppUpdateCheck} disabled={isCheckingAppUpdate}>
+              {isCheckingAppUpdate ? t("checking_updates") : t("check_for_app_updates")}
+            </button>
+            <button type="button" className="settings-secondary-action" onClick={() => showToast("Support section opened")}>Contact support</button>
+          </div>
+        </section>
+      )}
+
+      {activeSettingsSection === "about" && (
+        <section className="settings-panel-stack">
+          <div className="settings-panel-card">
+            <div className="settings-about-logo">SFT</div>
+            <h3 className="settings-about-title">Simple Fuel Tracker</h3>
+            <p className="settings-panel-note">A compact fuel, maintenance, and ownership tracker.</p>
+            <div className="settings-info-grid">
+              <div><span>Version</span><strong>{APP_VERSION_LABEL}</strong></div>
+              <div><span>Build date</span><strong>{formatAppDate(APP_BUILD_DATE)}</strong></div>
+            </div>
+            <button type="button" className="settings-primary-action" onClick={handleManualAppUpdateCheck} disabled={isCheckingAppUpdate}>
+              {isCheckingAppUpdate ? t("checking_updates") : t("check_for_app_updates")}
+            </button>
+          </div>
+        </section>
+      )}
+
       {activeSettingsSection === "vehicles" && (
         <>
       <section>
@@ -1726,8 +2104,11 @@ export default function Settings() {
 
         </>
       )}
-      </MotionDiv>
-      </Modal>
+              </MotionDiv>
+            </MotionDiv>
+          </div>
+        )}
+      </AnimatePresence>
 
       <ConfirmModal
         isOpen={deleteModal.isOpen}
@@ -2774,6 +3155,6 @@ export default function Settings() {
           </MotionDiv>
         )}
       </AnimatePresence>
-    </PageWrapper>
+    </div>
   );
 }

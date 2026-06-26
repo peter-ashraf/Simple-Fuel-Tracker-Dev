@@ -1,0 +1,208 @@
+/* Analytics screen local polish
+   Scope: spacing/padding for All-Time Records + Efficiency Level only.
+   This file intentionally overrides the old global analytics overrides in index.css. */
+
+.analytics-records-card {
+  margin-top: 2px !important;
+  min-height: 148px !important;
+  padding: 15px 13px 14px !important;
+  border-radius: 23px !important;
+}
+
+.analytics-records-header {
+  margin-bottom: 12px !important;
+  padding-inline: 0 !important;
+}
+
+.analytics-records-header h2 {
+  font-size: 15.5px !important;
+  line-height: 1.05 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.analytics-records-header button {
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 650 !important;
+}
+
+.analytics-record-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+}
+
+.analytics-record-card {
+  min-height: 101px !important;
+  padding: 12px 10px 10px !important;
+  border-radius: 17px !important;
+}
+
+.analytics-record-card > div {
+  max-width: calc(100% - 16px) !important;
+}
+
+.analytics-record-card p {
+  min-height: 22px !important;
+  font-size: 9.8px !important;
+  line-height: 1.08 !important;
+  font-weight: 590 !important;
+  letter-spacing: .045em !important;
+}
+
+.analytics-record-card strong {
+  margin-top: 8px !important;
+  font-size: clamp(18px, 4.65vw, 21px) !important;
+  line-height: .96 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.055em !important;
+}
+
+.analytics-record-card > div > span {
+  margin-top: 3px !important;
+  font-size: 10.5px !important;
+  line-height: 1.05 !important;
+  font-weight: 500 !important;
+}
+
+.analytics-record-card small {
+  margin-top: 6px !important;
+  font-size: 9.5px !important;
+  line-height: 1.05 !important;
+  font-weight: 500 !important;
+}
+
+.analytics-record-icon {
+  right: 8px !important;
+  bottom: 8px !important;
+  width: 29px !important;
+  height: 29px !important;
+  opacity: .88 !important;
+}
+
+.analytics-record-icon svg {
+  width: 27px !important;
+  height: 27px !important;
+  stroke-width: 1.65 !important;
+}
+
+.analytics-tyre-visual {
+  right: -5px !important;
+  bottom: -6px !important;
+  width: 49px !important;
+  height: 49px !important;
+  opacity: .88 !important;
+}
+
+.analytics-level-card {
+  margin-top: 2px !important;
+  min-height: 139px !important;
+  padding: 14px 13px 14px !important;
+  border-radius: 23px !important;
+}
+
+.analytics-level-header {
+  align-items: flex-start !important;
+  gap: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+.analytics-level-header h2 {
+  font-size: 15.5px !important;
+  line-height: 1.05 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.analytics-level-header p {
+  max-width: 50% !important;
+  font-size: 10.5px !important;
+  line-height: 1.15 !important;
+  text-align: right !important;
+}
+
+.analytics-level-body {
+  margin-top: 0 !important;
+  align-items: center !important;
+}
+
+.analytics-level-body p {
+  font-size: 9.8px !important;
+  line-height: 1.1 !important;
+}
+
+.analytics-level-body strong {
+  margin-top: 2px !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  font-weight: 650 !important;
+}
+
+.analytics-good-badge {
+  height: 28px !important;
+  padding-inline: 11px !important;
+  font-size: 10px !important;
+}
+
+.analytics-level-meter {
+  height: 10px !important;
+  margin: 14px 5px 0 !important;
+  overflow: visible !important;
+}
+
+.analytics-level-meter > span {
+  top: -7px !important;
+  width: 7px !important;
+  height: 24px !important;
+}
+
+.analytics-level-thresholds {
+  margin-top: 9px !important;
+  padding-inline: 7px !important;
+  gap: 12px !important;
+}
+
+.analytics-level-thresholds strong {
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.analytics-level-thresholds small {
+  margin-top: 1px !important;
+  font-size: 7.5px !important;
+  line-height: 1 !important;
+}
+
+.analytics-level-labels {
+  margin-top: 7px !important;
+  padding-inline: 2px !important;
+  font-size: 8.5px !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 395px) {
+  .analytics-records-card {
+    min-height: 144px !important;
+    padding: 14px 12px 13px !important;
+  }
+
+  .analytics-record-grid {
+    gap: 9px !important;
+  }
+
+  .analytics-record-card {
+    min-height: 98px !important;
+    padding: 11px 9px 9px !important;
+  }
+
+  .analytics-record-card strong {
+    font-size: 17.5px !important;
+  }
+
+  .analytics-level-card {
+    min-height: 136px !important;
+    padding: 13px 12px 13px !important;
+  }
+}

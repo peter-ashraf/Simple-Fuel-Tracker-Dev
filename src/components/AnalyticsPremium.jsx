@@ -1,28 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
-  AlertTriangle,
-  BarChart3,
+  ArrowUp,
   CalendarDays,
   Car,
   ChevronDown,
-  CircleDollarSign,
+  Fuel,
   Gauge,
-  Route,
+  Leaf,
   Trophy,
 } from "lucide-react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Line } from "react-chartjs-2";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useFuel } from "../hooks/useFuelContext";
@@ -32,82 +19,378 @@ import {
 } from "../utils/calculations";
 import { calculateEfficiencyThresholds } from "../utils/efficiencyThresholds";
 import { formatEfficiency2Dec, formatTo2Decimals } from "../utils/formatting";
-import {
-  GlassCard,
-  MetricTile,
-  ScreenHeader,
-  SectionTitle,
-  VehicleChip,
-} from "./PremiumUI";
 import { cn } from "./ui";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Tooltip,
-  Legend,
-  Filler,
-);
+import "./AnalyticsPremium.css";
 
 const MotionDiv = motion.div;
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: { intersect: false, mode: "index" },
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: "rgba(3, 7, 13, 0.92)",
-      borderColor: "rgba(32, 230, 183, 0.22)",
-      borderWidth: 1,
-      titleColor: "#f5faff",
-      bodyColor: "#b9c7d6",
-      displayColors: false,
-      padding: 12,
-    },
-  },
-  scales: {
-    x: {
-      grid: { color: "rgba(120, 210, 220, 0.07)", drawBorder: false },
-      ticks: { color: "#8ea0b5", font: { size: 11, weight: 600 } },
-    },
-    y: {
-      grid: { color: "rgba(120, 210, 220, 0.09)", drawBorder: false },
-      ticks: { color: "#8ea0b5", font: { size: 11, weight: 600 } },
-    },
-  },
+const MONTH_WINDOW_SIZE = 6;
+
+const RoadIcon = ({ className, strokeWidth = 1.8, ...props }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M8.5 20 11 4" />
+    <path d="M15.5 20 13 4" />
+    <path d="M12 6.8v2.1" />
+    <path d="M12 12v2.1" />
+    <path d="M12 17.2v2.1" />
+  </svg>
+);
+
+
+const numberOrZero = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 };
 
-const buildLineData = (labels, values, color = "#20E6B7") => ({
-  labels,
-  datasets: [
-    {
-      data: values,
-      borderColor: color,
-      backgroundColor: (context) => {
-        const chart = context.chart;
-        const { ctx, chartArea } = chart;
-        if (!chartArea) return "rgba(32, 230, 183, 0.24)";
-        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-        gradient.addColorStop(0, "rgba(32, 230, 183, 0.44)");
-        gradient.addColorStop(1, "rgba(32, 230, 183, 0)");
-        return gradient;
-      },
-      fill: true,
-      borderWidth: 3,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      pointBackgroundColor: "#dffff7",
-      pointBorderColor: color,
-      pointBorderWidth: 2,
-      tension: 0.42,
-    },
-  ],
-});
+const formatCompact = (value, digits = 0) => {
+  const number = numberOrZero(value);
+  return number.toLocaleString(undefined, {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  });
+};
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const getMonthKey = (date) => format(date, "yyyy-MM");
+
+const parseMonthKey = (key) => {
+  const [year, month] = String(key || "").split("-").map(Number);
+  if (!year || !month) return new Date();
+  return new Date(year, month - 1, 1);
+};
+
+const getTyreProfile = (vehicle) => {
+  const tyreSize = vehicle?.tyreSize || vehicle?.tyre_size;
+  if (!tyreSize) return { main: "-", rim: "", vehicle: vehicle?.name || "" };
+
+  if (typeof tyreSize === "string") {
+    const rimMatch = tyreSize.match(/R\s?\d+/i);
+    return {
+      main: tyreSize.replace(/\s?R\s?\d+/i, ""),
+      rim: rimMatch ? rimMatch[0].toUpperCase().replace(" ", "") : "",
+      vehicle: vehicle?.name || "",
+    };
+  }
+
+  const width = tyreSize.width ?? tyreSize.sectionWidth ?? tyreSize.section_width;
+  const aspectRatio = tyreSize.aspectRatio ?? tyreSize.aspect_ratio ?? tyreSize.profile;
+  const rimSize = tyreSize.rimSize ?? tyreSize.rim_size ?? tyreSize.rim;
+
+  return {
+    main: width && aspectRatio ? `${width}/${aspectRatio}` : "-",
+    rim: rimSize ? `R${rimSize}` : "",
+    vehicle: vehicle?.name || "",
+  };
+};
+
+function AnalyticsVehicleChip({
+  activeVehicle,
+  vehicles,
+  selectedVehicleId,
+  setSelectedVehicleId,
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const selected =
+    activeVehicle || vehicles.find((vehicle) => vehicle.id === selectedVehicleId);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="analytics-filter-wrap analytics-vehicle-filter" ref={ref}>
+      <button
+        type="button"
+        className="analytics-filter-chip"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="analytics-filter-icon">
+          <Car className="h-4 w-4" strokeWidth={1.75} />
+        </span>
+        <span className="analytics-filter-text">{selected?.name || "Vehicle"}</span>
+        <ChevronDown
+          className={cn("analytics-filter-chevron", open && "is-open")}
+          strokeWidth={2}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && vehicles.length > 0 && (
+          <MotionDiv
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.14, ease: "easeOut" }}
+            className="analytics-dropdown analytics-vehicle-dropdown"
+          >
+            {vehicles.map((vehicle) => {
+              const isActive = vehicle.id === selectedVehicleId;
+              return (
+                <button
+                  key={vehicle.id}
+                  type="button"
+                  className={cn("analytics-dropdown-item", isActive && "is-active")}
+                  onClick={() => {
+                    setSelectedVehicleId?.(vehicle.id);
+                    setOpen(false);
+                  }}
+                >
+                  <span>{vehicle.name}</span>
+                  {isActive && <span className="analytics-dropdown-check">✓</span>}
+                </button>
+              );
+            })}
+          </MotionDiv>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function AnalyticsMonthChip({
+  selectedData,
+  monthlyGroups,
+  selectedMonth,
+  setSelectedMonth,
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="analytics-filter-wrap analytics-month-filter" ref={ref}>
+      <button
+        type="button"
+        className="analytics-filter-chip"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="analytics-filter-icon">
+          <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
+        </span>
+        <span className="analytics-filter-text">{selectedData?.monthLabel || "Month"}</span>
+        <ChevronDown
+          className={cn("analytics-filter-chevron", open && "is-open")}
+          strokeWidth={2}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && monthlyGroups.length > 0 && (
+          <MotionDiv
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.14, ease: "easeOut" }}
+            className="analytics-dropdown analytics-month-dropdown"
+          >
+            {monthlyGroups.map((group) => {
+              const date = parseMonthKey(group.key);
+              const isActive = group.key === selectedMonth;
+              return (
+                <button
+                  key={group.key}
+                  type="button"
+                  className={cn("analytics-dropdown-item", isActive && "is-active")}
+                  onClick={() => {
+                    setSelectedMonth(group.key);
+                    setOpen(false);
+                  }}
+                >
+                  <span>{t(format(date, "MMMM"))} {format(date, "yyyy")}</span>
+                  {isActive && <span className="analytics-dropdown-check">✓</span>}
+                </button>
+              );
+            })}
+          </MotionDiv>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function PremiumAreaChart({ values, labels, variant = "large", yLabels = [] }) {
+  const safeValues = values.length ? values.map((value) => numberOrZero(value)) : [0];
+  const width = 640;
+  const height = variant === "large" ? 245 : 168;
+  const paddingX = variant === "large" ? 36 : 28;
+  const paddingTop = variant === "large" ? 22 : 18;
+  const paddingBottom = variant === "large" ? 42 : 32;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const chartWidth = width - paddingX * 2;
+  const max = Math.max(...safeValues, 1);
+  const min = Math.min(...safeValues, 0);
+  const range = Math.max(max - min, 1);
+
+  const points = safeValues.map((value, index) => {
+    const x = paddingX + (chartWidth * index) / Math.max(safeValues.length - 1, 1);
+    const y = paddingTop + chartHeight - ((value - min) / range) * (chartHeight * 0.82) - chartHeight * 0.06;
+    return { x, y, value };
+  });
+
+  const linePath = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+    .join(" ");
+  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${height - paddingBottom} L ${points[0].x.toFixed(1)} ${height - paddingBottom} Z`;
+
+  return (
+    <div className={cn("analytics-chart-shell", `analytics-chart-${variant}`)}>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id={`analytics-fill-${variant}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(39, 255, 207, 0.48)" />
+            <stop offset="74%" stopColor="rgba(39, 255, 207, 0.12)" />
+            <stop offset="100%" stopColor="rgba(39, 255, 207, 0)" />
+          </linearGradient>
+          <filter id={`analytics-glow-${variant}`} x="-20%" y="-40%" width="140%" height="180%">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {[0, 1, 2, 3].map((row) => {
+          const y = paddingTop + (chartHeight * row) / 3;
+          return (
+            <line
+              key={`grid-h-${row}`}
+              x1={paddingX}
+              y1={y}
+              x2={width - paddingX}
+              y2={y}
+              className="analytics-chart-grid-line"
+            />
+          );
+        })}
+
+        {points.map((point, index) => (
+          <line
+            key={`grid-v-${index}`}
+            x1={point.x}
+            y1={paddingTop}
+            x2={point.x}
+            y2={height - paddingBottom}
+            className="analytics-chart-grid-line analytics-chart-grid-vertical"
+          />
+        ))}
+
+        <path d={areaPath} fill={`url(#analytics-fill-${variant})`} />
+        <path d={linePath} className="analytics-chart-line" filter={`url(#analytics-glow-${variant})`} />
+
+        {points.map((point, index) => (
+          <circle
+            key={`point-${index}`}
+            cx={point.x}
+            cy={point.y}
+            r={variant === "large" ? 4.5 : 3.7}
+            className="analytics-chart-point"
+          />
+        ))}
+      </svg>
+
+      <div className="analytics-chart-labels">
+        {labels.map((label, index) => (
+          <span key={`${label}-${index}`}>{label}</span>
+        ))}
+      </div>
+
+      {yLabels.length > 0 && (
+        <div className="analytics-chart-ylabels">
+          {yLabels.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrendPill({ value, label }) {
+  if (value == null || !Number.isFinite(Number(value))) return null;
+  const isUp = Number(value) >= 0;
+
+  return (
+    <span className="analytics-trend-pill">
+      <ArrowUp className={cn("h-3.5 w-3.5", !isUp && "rotate-180")} strokeWidth={2.2} />
+      {Math.abs(Number(value)).toFixed(1)} {label}
+    </span>
+  );
+}
+
+function AnalyticsSmallMetric({ icon: Icon, title, value, unit, trend, tone = "teal" }) {
+  return (
+    <section className="analytics-mini-card">
+      <span className={cn("analytics-mini-icon", `analytics-mini-icon-${tone}`)}>
+        <Icon className="h-5 w-5" strokeWidth={1.85} />
+      </span>
+      <div className="analytics-mini-copy">
+        <p>{title}</p>
+        <div>
+          <strong>{value}</strong>
+          {unit && <span>{unit}</span>}
+        </div>
+        {trend && <TrendPill value={trend.value} label={trend.label} />}
+      </div>
+    </section>
+  );
+}
+
+function RecordCard({ title, value, unit, date, icon: Icon, tone = "gold", children }) {
+  return (
+    <article className="analytics-record-card">
+      <div>
+        <p>{title}</p>
+        <strong>{value}</strong>
+        {unit && <span>{unit}</span>}
+        {date && <small>{date}</small>}
+      </div>
+      {children || (
+        <span className={cn("analytics-record-icon", `analytics-record-icon-${tone}`)}>
+          <Icon className="h-8 w-8" strokeWidth={1.75} />
+        </span>
+      )}
+    </article>
+  );
+}
+
+function TyreVisual() {
+  return (
+    <span className="analytics-tyre-visual" aria-hidden="true">
+      <span />
+    </span>
+  );
+}
 
 export default function AnalyticsPremium() {
   const {
@@ -117,28 +400,15 @@ export default function AnalyticsPremium() {
     setSelectedVehicleId,
     activeVehicleFillUps,
   } = useFuel();
-  const { t, i18n } = useTranslation();
-  const isRtl = i18n.language.startsWith("ar");
+  const { t } = useTranslation();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
-  const [expandedHealthIssueIds, setExpandedHealthIssueIds] = useState([]);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsMonthDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const monthlyGroups = useMemo(() => {
     const groups = {};
+
     activeVehicleFillUps.forEach((fill, index) => {
       const date = new Date(fill.timestamp);
-      const key = format(date, "yyyy-MM");
+      const key = getMonthKey(date);
       if (!groups[key]) {
         groups[key] = {
           key,
@@ -146,30 +416,40 @@ export default function AnalyticsPremium() {
           totalCost: 0,
           totalLiters: 0,
           distance: 0,
+          efficiencySamples: [],
         };
       }
+
       groups[key].fills.push({ fill, index });
-      groups[key].totalCost += Number(fill.liters || 0) * Number(fill.pricePerLiter || 0);
-      groups[key].totalLiters += Number(fill.liters || 0);
+      groups[key].totalCost += numberOrZero(fill.liters) * numberOrZero(fill.pricePerLiter);
+      groups[key].totalLiters += numberOrZero(fill.liters);
+
       if (index > 0) {
         const previous = activeVehicleFillUps[index - 1];
-        if (previous.vehicleId === fill.vehicleId) {
-          groups[key].distance += Number(fill.odometer || 0) - Number(previous.odometer || 0);
+        if (previous?.vehicleId === fill.vehicleId) {
+          const distance = numberOrZero(fill.odometer) - numberOrZero(previous.odometer);
+          if (distance > 0) groups[key].distance += distance;
         }
       }
     });
+
     return Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
   }, [activeVehicleFillUps]);
+
+  const chronologicalMonths = useMemo(
+    () => [...monthlyGroups].reverse(),
+    [monthlyGroups],
+  );
 
   const selectedData = useMemo(() => {
     if (monthlyGroups.length === 0) return null;
     const group = monthlyGroups.find((entry) => entry.key === selectedMonth) || monthlyGroups[0];
-    const avgEff =
-      group.distance > 0 && group.totalLiters > 0
-        ? group.distance / group.totalLiters
-        : 0;
+    const avgEff = group.distance > 0 && group.totalLiters > 0
+      ? group.distance / group.totalLiters
+      : 0;
     const costPerKm = group.distance > 0 ? group.totalCost / group.distance : 0;
-    const date = new Date(group.key + "-01");
+    const date = parseMonthKey(group.key);
+
     return {
       ...group,
       avgEff,
@@ -178,18 +458,56 @@ export default function AnalyticsPremium() {
     };
   }, [monthlyGroups, selectedMonth, t]);
 
-  const chronologicalMonths = useMemo(
-    () => [...monthlyGroups].reverse(),
-    [monthlyGroups],
+  useEffect(() => {
+    if (!selectedData && monthlyGroups[0]?.key) {
+      setSelectedMonth(monthlyGroups[0].key);
+    }
+  }, [monthlyGroups, selectedData]);
+
+  const selectedMonthIndex = useMemo(
+    () => chronologicalMonths.findIndex((group) => group.key === selectedData?.key),
+    [chronologicalMonths, selectedData?.key],
   );
 
-  const monthChange = useMemo(() => {
-    if (!selectedData || chronologicalMonths.length < 2) return null;
-    const index = chronologicalMonths.findIndex((group) => group.key === selectedData.key);
-    const previous = chronologicalMonths[index - 1];
-    if (!previous?.totalCost) return null;
-    return ((selectedData.totalCost - previous.totalCost) / previous.totalCost) * 100;
-  }, [chronologicalMonths, selectedData]);
+  const previousMonth = selectedMonthIndex > 0 ? chronologicalMonths[selectedMonthIndex - 1] : null;
+  const previousAvgEff = previousMonth && previousMonth.distance > 0 && previousMonth.totalLiters > 0
+    ? previousMonth.distance / previousMonth.totalLiters
+    : 0;
+
+  const spendChange = previousMonth?.totalCost
+    ? ((numberOrZero(selectedData?.totalCost) - previousMonth.totalCost) / previousMonth.totalCost) * 100
+    : null;
+  const efficiencyChange = previousAvgEff
+    ? numberOrZero(selectedData?.avgEff) - previousAvgEff
+    : null;
+  const distanceChange = previousMonth
+    ? numberOrZero(selectedData?.distance) - numberOrZero(previousMonth.distance)
+    : null;
+
+  const monthWindow = useMemo(() => {
+    const endDate = parseMonthKey(selectedData?.key || getMonthKey(new Date()));
+    const groupsByKey = new Map(monthlyGroups.map((group) => [group.key, group]));
+    const months = [];
+
+    for (let index = MONTH_WINDOW_SIZE - 1; index >= 0; index -= 1) {
+      const date = new Date(endDate.getFullYear(), endDate.getMonth() - index, 1);
+      const key = getMonthKey(date);
+      const group = groupsByKey.get(key);
+      const avgEff = group?.distance > 0 && group?.totalLiters > 0
+        ? group.distance / group.totalLiters
+        : 0;
+
+      months.push({
+        key,
+        label: format(date, "MMM"),
+        totalCost: formatTo2Decimals(group?.totalCost || 0),
+        avgEff: formatTo2Decimals(avgEff),
+        distance: group?.distance || 0,
+      });
+    }
+
+    return months;
+  }, [monthlyGroups, selectedData?.key]);
 
   const tripData = useMemo(
     () =>
@@ -199,7 +517,7 @@ export default function AnalyticsPremium() {
           ...calculateTripMetrics(activeVehicleFillUps, index),
         }))
         .slice(1)
-        .filter((trip) => trip.distance > 0),
+        .filter((trip) => trip.distance > 0 && trip.kmPerLiter > 0),
     [activeVehicleFillUps],
   );
 
@@ -218,373 +536,210 @@ export default function AnalyticsPremium() {
     [activeVehicleFillUps],
   );
 
-  const dataHealth = useMemo(() => {
-    const sortedByDate = [...activeVehicleFillUps].sort(
-      (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
-    );
-    const issues = [];
-    const dateCounts = sortedByDate.reduce((counts, fill) => {
-      const dateKey = format(new Date(fill.timestamp), "yyyy-MM-dd");
-      counts[dateKey] = (counts[dateKey] || 0) + 1;
-      return counts;
-    }, {});
-    const duplicateDateCount = Object.values(dateCounts).filter((count) => count > 1).length;
-    const missingPriceCount = sortedByDate.filter((fill) => !Number(fill.pricePerLiter)).length;
-    const invalidVolumeCount = sortedByDate.filter((fill) => Number(fill.liters) <= 0).length;
-    const odometerReversalCount = sortedByDate.filter(
-      (fill, index) =>
-        index > 0 && Number(fill.odometer) < Number(sortedByDate[index - 1].odometer),
-    ).length;
-    const suspiciousEfficiencyCount = tripData.filter(
-      (trip) => trip.kmPerLiter > 0 && (trip.kmPerLiter < 4 || trip.kmPerLiter > 30),
-    ).length;
-
-    if (duplicateDateCount > 0) {
-      issues.push({
-        id: "duplicate-dates",
-        title: `${duplicateDateCount} duplicate date group${duplicateDateCount === 1 ? "" : "s"}`,
-      });
-    }
-    if (missingPriceCount > 0) {
-      issues.push({
-        id: "missing-price",
-        title: `${missingPriceCount} fill-up${missingPriceCount === 1 ? "" : "s"} missing price`,
-      });
-    }
-    if (invalidVolumeCount > 0) {
-      issues.push({
-        id: "invalid-liters",
-        title: `${invalidVolumeCount} fill-up${invalidVolumeCount === 1 ? "" : "s"} with invalid liters`,
-      });
-    }
-    if (odometerReversalCount > 0) {
-      issues.push({
-        id: "odometer-reversal",
-        title: `${odometerReversalCount} odometer reversal${odometerReversalCount === 1 ? "" : "s"} by date order`,
-      });
-    }
-    if (suspiciousEfficiencyCount > 0) {
-      issues.push({
-        id: "suspicious-efficiency",
-        title: `${suspiciousEfficiencyCount} unusual efficiency result${suspiciousEfficiencyCount === 1 ? "" : "s"}`,
-      });
-    }
-
-    return {
-      status: issues.length === 0 ? "good" : issues.length <= 2 ? "review" : "attention",
-      issues,
-    };
-  }, [activeVehicleFillUps, tripData]);
-
-  const toggleHealthIssue = (issueId) => {
-    setExpandedHealthIssueIds((current) =>
-      current.includes(issueId)
-        ? current.filter((id) => id !== issueId)
-        : [...current, issueId],
-    );
-  };
-
-  const spendLabels = chronologicalMonths.map((group) =>
-    format(new Date(group.key + "-01"), "MMM"),
-  );
-  const spendValues = chronologicalMonths.map((group) => formatTo2Decimals(group.totalCost));
-  const efficiencyLabels = tripData.slice(-8).map((trip) => trip.date);
-  const efficiencyValues = tripData.slice(-8).map((trip) => formatTo2Decimals(trip.kmPerLiter));
+  const spendValues = monthWindow.map((month) => month.totalCost);
+  const spendLabels = monthWindow.map((month) => month.label);
+  const efficiencyValues = monthWindow.map((month) => month.avgEff);
+  const efficiencyLabels = monthWindow.map((month) => month.label);
+  const latestEfficiency = efficiencyValues.filter((value) => value > 0).at(-1) || numberOrZero(selectedData?.avgEff);
+  const tyreProfile = getTyreProfile(activeVehicle);
+  const totalChartMax = Math.max(...spendValues, numberOrZero(selectedData?.totalCost), 3000);
+  const yLabels = [
+    `${Math.ceil(totalChartMax / 1000)}K`,
+    `${Math.ceil((totalChartMax * 2) / 3000)}K`,
+    `${Math.ceil(totalChartMax / 3000)}K`,
+    "0",
+  ];
   const levelPercent = efficiencyThresholds.ready
-    ? Math.min(
-        96,
-        Math.max(
-          4,
-          ((efficiencyThresholds.baseline - efficiencyThresholds.low) /
-            Math.max(efficiencyThresholds.high - efficiencyThresholds.low, 1)) *
-            50 +
-            25,
-        ),
+    ? clamp(
+        ((numberOrZero(efficiencyThresholds.baseline) - numberOrZero(efficiencyThresholds.low)) /
+          Math.max(numberOrZero(efficiencyThresholds.high) - numberOrZero(efficiencyThresholds.low), 1)) *
+          50 +
+          25,
+        5,
+        95,
       )
-    : 50;
+    : 64;
+
+  const efficiencyLevelThresholds = efficiencyThresholds.ready
+    ? [
+        { label: "Low", value: numberOrZero(efficiencyThresholds.low) },
+        { label: "Baseline", value: numberOrZero(efficiencyThresholds.baseline) },
+        { label: "High", value: numberOrZero(efficiencyThresholds.high) },
+      ]
+    : [];
 
   if (activeVehicleFillUps.length < 2) {
     return (
-      <div className="space-y-6 pb-4">
-        <ScreenHeader title={t("analytics")} />
-        <GlassCard className="p-10 text-center">
-          <BarChart3 className="mx-auto mb-4 h-12 w-12 text-[var(--text-muted)]" />
-          <p className="font-bold text-[var(--text-secondary)]">{t("untracked")}</p>
-        </GlassCard>
+      <div className="analytics-premium-screen">
+        <div className="analytics-premium-content">
+          <header className="analytics-topbar">
+            <h1>Analytics</h1>
+          </header>
+          <section className="analytics-empty-card">
+            <Gauge className="h-10 w-10" strokeWidth={1.8} />
+            <p>{t("untracked")}</p>
+            <span>Add at least two fill-ups to build trends and records.</span>
+          </section>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-4">
-      <ScreenHeader title={t("analytics")} />
-
-      <div className="grid grid-cols-2 gap-3">
-        <VehicleChip
-          vehicles={vehicles}
-          selectedVehicleId={selectedVehicleId}
-          setSelectedVehicleId={setSelectedVehicleId}
-          activeVehicle={activeVehicle}
-          className="min-w-0"
-        />
-        <div className="relative min-w-0" ref={dropdownRef}>
-          <button
-            type="button"
-            onClick={() => setIsMonthDropdownOpen((current) => !current)}
-            className="vehicle-chip w-full"
-          >
-            <CalendarDays className="h-5 w-5 shrink-0" strokeWidth={1.8} />
-            <span className="min-w-0 truncate">{selectedData?.monthLabel}</span>
-            <ChevronDown
-              className={cn("h-4 w-4 shrink-0 transition-transform", isMonthDropdownOpen && "rotate-180")}
+    <div className="analytics-premium-screen">
+      <div className="analytics-premium-content">
+        <header className="analytics-topbar">
+          <h1>Analytics</h1>
+          <div className="analytics-filter-row">
+            <AnalyticsVehicleChip
+              activeVehicle={activeVehicle}
+              vehicles={vehicles}
+              selectedVehicleId={selectedVehicleId}
+              setSelectedVehicleId={setSelectedVehicleId}
             />
-          </button>
-          <AnimatePresence>
-            {isMonthDropdownOpen && (
-              <MotionDiv
-                initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                className={cn("vehicle-menu", isRtl && "left-0 right-auto")}
-              >
-                {monthlyGroups.map((group) => {
-                  const date = new Date(group.key + "-01");
-                  return (
-                    <button
-                      key={group.key}
-                      type="button"
-                      onClick={() => {
-                        setSelectedMonth(group.key);
-                        setIsMonthDropdownOpen(false);
-                      }}
-                      className={cn("vehicle-menu-item", selectedData?.key === group.key && "active")}
-                    >
-                      {t(format(date, "MMMM"))} {format(date, "yyyy")}
-                    </button>
-                  );
-                })}
-              </MotionDiv>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      <GlassCard className="space-y-5 p-5">
-        <div className="grid gap-4">
-          <div>
-            <p className="text-sm font-bold uppercase text-[var(--text-secondary)]">
-              {t("total_spent")}
-            </p>
-            <div className="mt-5 flex items-baseline gap-3">
-              <span className="text-[48px] font-black leading-none tracking-normal text-[var(--text-primary)]">
-                {selectedData ? selectedData.totalCost.toFixed(0) : "0"}
-              </span>
-              <span className="text-xl font-semibold text-[var(--text-secondary)]">
-                {t("currency")}
-              </span>
-            </div>
-            {monthChange != null && (
-              <span className="mt-5 inline-flex rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.12)] px-3 py-1.5 text-sm font-bold text-[var(--accent-primary)]">
-                {monthChange >= 0 ? "Up" : "Down"} {Math.abs(monthChange).toFixed(1)}% vs previous
-              </span>
-            )}
-          </div>
-          <div className="h-[190px]">
-            <Line
-              options={chartOptions}
-              data={buildLineData(spendLabels, spendValues)}
+            <AnalyticsMonthChip
+              selectedData={selectedData}
+              monthlyGroups={monthlyGroups}
+              selectedMonth={selectedData?.key || selectedMonth}
+              setSelectedMonth={setSelectedMonth}
             />
           </div>
-        </div>
-      </GlassCard>
+        </header>
 
-      <div className="grid grid-cols-2 gap-3">
-        <MetricTile
-          icon={Gauge}
-          label="Avg. Mileage"
-          value={selectedData?.avgEff ? selectedData.avgEff.toFixed(2) : "-"}
-          unit="km/L"
-          trend={`${formatEfficiency2Dec(efficiencyThresholds.baseline || 0)} baseline`}
-        />
-        <MetricTile
-          icon={Route}
-          label={t("distance")}
-          value={selectedData ? Math.round(selectedData.distance).toLocaleString() : "-"}
-          unit="km"
-          trend={`${predictiveDailyDistance.toFixed(1)} ${t("km_day")}`}
-          tone="cyan"
-        />
-        <MetricTile
-          icon={CircleDollarSign}
-          label={t("cost_per_km")}
-          value={selectedData?.costPerKm ? selectedData.costPerKm.toFixed(2) : "-"}
-          unit={t("currency")}
-          tone="blue"
-        />
-        <MetricTile
-          icon={Car}
-          label={t("active_vehicle")}
-          value={activeVehicle?.name || "-"}
-          unit=""
-          tone="amber"
-        />
-      </div>
-
-      <GlassCard className="space-y-5 p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold uppercase text-[var(--text-secondary)]">
-              {t("efficiency_trend")}
-            </p>
-            <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-4xl font-black text-[var(--text-primary)]">
-                {efficiencyValues.length
-                  ? efficiencyValues[efficiencyValues.length - 1].toFixed(2)
-                  : "-"}
-              </span>
-              <span className="text-lg font-semibold text-[var(--text-secondary)]">km/L</span>
+        <section className="analytics-hero-card">
+          <div className="analytics-hero-copy">
+            <p>Total Spent</p>
+            <div>
+              <strong>{formatCompact(selectedData?.totalCost || 0, 0)}</strong>
+              <span>{t("currency")}</span>
             </div>
+            <TrendPill value={spendChange} label="vs May" />
           </div>
-          <span className="rounded-full border border-[var(--border-soft)] px-4 py-2 text-sm font-bold text-[var(--text-secondary)]">
-            This Year
-          </span>
-        </div>
-        <div className="h-[170px]">
-          <Line
-            options={chartOptions}
-            data={buildLineData(efficiencyLabels, efficiencyValues)}
+          <PremiumAreaChart
+            values={spendValues}
+            labels={spendLabels}
+            yLabels={yLabels}
+            variant="large"
+          />
+        </section>
+
+        <div className="analytics-mini-grid">
+          <AnalyticsSmallMetric
+            icon={Gauge}
+            title="Avg. Mileage"
+            value={selectedData?.avgEff ? selectedData.avgEff.toFixed(2) : "-"}
+            unit="km/L"
+            trend={efficiencyChange != null ? { value: efficiencyChange, label: "vs May" } : null}
+          />
+          <AnalyticsSmallMetric
+            icon={RoadIcon}
+            title="Total Distance"
+            value={formatCompact(selectedData?.distance || 0, 0)}
+            unit="km"
+            tone="cyan"
+            trend={distanceChange != null ? { value: distanceChange, label: "km vs May" } : { value: predictiveDailyDistance, label: t("km_day") }}
           />
         </div>
-      </GlassCard>
 
-      <section className="space-y-4">
-        <SectionTitle title={t("all_time_records")} />
-        <div className="grid grid-cols-3 gap-2">
-          <GlassCard className="p-3">
-            <p className="text-sm font-bold uppercase text-[var(--text-secondary)]">
-              {t("best_efficiency")}
-            </p>
-            <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">
-              {bestTrip ? formatEfficiency2Dec(bestTrip.kmPerLiter) : "-"}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-[var(--text-secondary)]">
-              {bestTrip?.date || "-"}
-            </p>
-            <Trophy className="ms-auto mt-2 h-7 w-7 text-[var(--warning)]" />
-          </GlassCard>
-          <GlassCard className="p-3">
-            <p className="text-sm font-bold uppercase text-[var(--text-secondary)]">
-              {t("worst_efficiency")}
-            </p>
-            <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">
-              {worstTrip ? formatEfficiency2Dec(worstTrip.kmPerLiter) : "-"}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-[var(--text-secondary)]">
-              {worstTrip?.date || "-"}
-            </p>
-            <AlertTriangle className="ms-auto mt-2 h-7 w-7 text-[var(--danger)]" />
-          </GlassCard>
-          <GlassCard className="p-3">
-            <p className="text-sm font-bold uppercase text-[var(--text-secondary)]">
-              {t("tyre_profile")}
-            </p>
-            <p className="mt-3 text-2xl font-black leading-tight text-[var(--text-primary)]">
-              {activeVehicle?.tyreSize
-                ? `${activeVehicle.tyreSize.width}/${activeVehicle.tyreSize.aspectRatio}`
-                : "-"}
-            </p>
-            <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">
-              {activeVehicle?.tyreSize ? `R${activeVehicle.tyreSize.rimSize}` : ""}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-[var(--text-secondary)]">
-              {activeVehicle?.name}
-            </p>
-          </GlassCard>
-        </div>
-      </section>
+        <section className="analytics-trend-card">
+          <div className="analytics-section-header">
+            <div>
+              <p>Efficiency Trend <span>km/L</span></p>
+              <div>
+                <strong>{latestEfficiency ? latestEfficiency.toFixed(2) : "-"}</strong>
+                <span>km/L</span>
+                {efficiencyChange != null && (
+                  <TrendPill value={efficiencyChange} label="vs last month" />
+                )}
+              </div>
+            </div>
+            <button type="button" className="analytics-period-pill">
+              This Year
+              <ChevronDown className="h-4 w-4" strokeWidth={2} />
+            </button>
+          </div>
+          <PremiumAreaChart
+            values={efficiencyValues}
+            labels={efficiencyLabels}
+            variant="compact"
+            yLabels={["14", "12", "10", "8", "6"]}
+          />
+        </section>
 
-      <GlassCard className="space-y-5 p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-black text-[var(--text-primary)]">
-              {t("efficiency_levels")}
-            </h2>
-            <p className="mt-1 text-sm font-semibold text-[var(--text-secondary)]">
-              Based on latest {efficiencyThresholds.sampleCount} samples
+        <section className="analytics-records-card">
+          <div className="analytics-records-header">
+            <h2>All-Time Records</h2>
+            <button type="button">View all</button>
+          </div>
+          <div className="analytics-record-grid">
+            <RecordCard
+              title="Best Efficiency"
+              value={bestTrip ? formatEfficiency2Dec(bestTrip.kmPerLiter) : "-"}
+              unit="km/L"
+              date={bestTrip?.date || "-"}
+              icon={Trophy}
+              tone="gold"
+            />
+            <RecordCard
+              title="Worst Efficiency"
+              value={worstTrip ? formatEfficiency2Dec(worstTrip.kmPerLiter) : "-"}
+              unit="km/L"
+              date={worstTrip?.date || "-"}
+              icon={Trophy}
+              tone="red"
+            />
+            <RecordCard
+              title="Tyre Profile"
+              value={tyreProfile.main}
+              unit={tyreProfile.rim}
+              date={tyreProfile.vehicle}
+            >
+              <TyreVisual />
+            </RecordCard>
+          </div>
+        </section>
+
+        <section className="analytics-level-card">
+          <div className="analytics-level-header">
+            <h2>Efficiency Level</h2>
+            <p>
+              Based on latest <strong>{efficiencyThresholds.sampleCount}</strong> samples
             </p>
           </div>
-          <span className="rounded-full border border-[var(--border-strong)] bg-[rgba(32,230,183,0.12)] px-4 py-2 text-sm font-black text-[var(--accent-primary)]">
-            GOOD
-          </span>
-        </div>
-        <div>
-          <p className="text-sm font-bold uppercase text-[var(--text-secondary)]">
-            {t("vehicle_baseline")}
-          </p>
-          <p className="mt-2 text-3xl font-black text-[var(--text-primary)]">
-            {efficiencyThresholds.ready
-              ? efficiencyThresholds.baseline.toFixed(2)
-              : "-"}{" "}
-            <span className="text-lg font-semibold text-[var(--text-secondary)]">km/L</span>
-          </p>
-        </div>
-        <div className="relative pt-4">
-          <div className="h-5 overflow-hidden rounded-full bg-gradient-to-r from-red-500 via-amber-400 via-45% to-emerald-500" />
-          <span
-            className="absolute top-1 h-8 w-3 -translate-x-1/2 rounded-full border-2 border-white bg-[var(--bg-card-solid)] shadow-lg"
-            style={{ left: `${levelPercent}%` }}
-          />
-          <div className="mt-3 grid grid-cols-4 text-center text-xs font-bold uppercase text-[var(--text-secondary)]">
+          <div className="analytics-level-body">
+            <div>
+              <p>Vehicle Baseline</p>
+              <strong>
+                {efficiencyThresholds.ready ? efficiencyThresholds.baseline.toFixed(2) : "-"}
+                <span> km/L</span>
+              </strong>
+            </div>
+            <span className="analytics-good-badge">
+              <Leaf className="h-4 w-4" strokeWidth={2} />
+              Good
+            </span>
+          </div>
+          <div className="analytics-level-meter" aria-label="Vehicle efficiency level">
+            <span style={{ left: `${levelPercent}%` }} />
+          </div>
+          {efficiencyLevelThresholds.length > 0 && (
+            <div className="analytics-level-thresholds" aria-label="Efficiency thresholds">
+              {efficiencyLevelThresholds.map((threshold) => (
+                <span key={threshold.label}>
+                  <strong>{threshold.value.toFixed(2)}</strong>
+                  <small>{threshold.label}</small>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="analytics-level-labels">
             <span>Poor</span>
             <span>Average</span>
             <span>Good</span>
             <span>Excellent</span>
           </div>
-        </div>
-      </GlassCard>
-
-      <GlassCard className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-black uppercase text-[var(--text-secondary)]">
-              Data Health
-            </p>
-            <p className="mt-1 text-sm font-semibold text-[var(--text-secondary)]">
-              Quick checks for entries that can distort stats, forecasts, or sync review.
-            </p>
-          </div>
-          <span
-            className={cn(
-              "rounded-full px-3 py-1 text-xs font-black uppercase",
-              dataHealth.status === "good"
-                ? "bg-emerald-500/10 text-[var(--accent-primary)]"
-                : dataHealth.status === "review"
-                  ? "bg-amber-500/10 text-[var(--warning)]"
-                  : "bg-red-500/10 text-[var(--danger)]",
-            )}
-          >
-            {dataHealth.status}
-          </span>
-        </div>
-        {dataHealth.issues.length > 0 && (
-          <div className="mt-4 space-y-2">
-            {dataHealth.issues.map((issue) => {
-              const isExpanded = expandedHealthIssueIds.includes(issue.id);
-              return (
-                <button
-                  key={issue.id}
-                  type="button"
-                  onClick={() => toggleHealthIssue(issue.id)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-soft)] bg-[rgba(127,139,154,0.08)] px-4 py-3 text-start text-sm font-bold text-[var(--text-secondary)]"
-                >
-                  <span>{issue.title}</span>
-                  <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </GlassCard>
+        </section>
+      </div>
     </div>
   );
 }
