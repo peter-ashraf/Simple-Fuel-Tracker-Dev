@@ -116,6 +116,71 @@ const getSettingsDefaultVehicleImage = () => {
   return `${base.endsWith("/") ? base : `${base}/`}vehicle-images/vehicle-hero-default.png`;
 };
 
+const DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS = {
+  offsetX: 0,
+  offsetY: 0,
+  zoom: 1,
+  rotate: 0,
+  flipX: false,
+  flipY: false,
+};
+
+const clampSettingsNumber = (value, min, max, fallback) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+};
+
+const normalizeSettingsVehicleImageSettings = (settings = {}) => ({
+  offsetX: clampSettingsNumber(
+    settings.offsetX ??
+      settings.x ??
+      (settings.positionX != null
+        ? (Number(settings.positionX) - 62) * 5
+        : DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS.offsetX),
+    -220,
+    220,
+    DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS.offsetX,
+  ),
+  offsetY: clampSettingsNumber(
+    settings.offsetY ??
+      settings.y ??
+      (settings.positionY != null
+        ? (Number(settings.positionY) - 54) * 3
+        : DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS.offsetY),
+    -140,
+    140,
+    DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS.offsetY,
+  ),
+  zoom: clampSettingsNumber(
+    settings.zoom ?? settings.scale ?? DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS.zoom,
+    0.45,
+    2.6,
+    DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS.zoom,
+  ),
+  rotate: clampSettingsNumber(
+    settings.rotate ?? settings.rotation ?? DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS.rotate,
+    -180,
+    180,
+    DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS.rotate,
+  ),
+  flipX: Boolean(settings.flipX ?? settings.flipHorizontal ?? false),
+  flipY: Boolean(settings.flipY ?? settings.flipVertical ?? false),
+});
+
+const scaleSettingsHeroImageSettings = (settings = DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS) => {
+  const normalized = normalizeSettingsVehicleImageSettings(settings);
+
+  return {
+    offsetX: normalized.offsetX * 0.44,
+    offsetY: normalized.offsetY * 0.36,
+    zoom: clampSettingsNumber(0.96 + (normalized.zoom - 1) * 0.72, 0.45, 2.6, 1),
+    rotate: normalized.rotate,
+    flipX: normalized.flipX,
+    flipY: normalized.flipY,
+  };
+};
+
 const normalizeSettingsImageValue = (value) => {
   if (!value) return null;
   if (typeof value === "string") {
@@ -224,6 +289,41 @@ const getSettingsStoredVehicleImage = (vehicle) => {
 };
 
 const getSettingsVehicleImageActiveEntryKey = (vehicleId) => `sft_vehicle_image_active_${vehicleId}`;
+const getSettingsVehicleImageSettingsKey = (vehicleId) => `sft_vehicle_image_settings_${vehicleId}`;
+
+const getStoredSettingsVehicleImageSettings = (vehicle) => {
+  if (!vehicle || typeof window === "undefined") {
+    return DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS;
+  }
+
+  const ids = getSettingsVehicleLookupIds(vehicle);
+
+  for (const id of ids) {
+    const directKey = getSettingsVehicleImageSettingsKey(id);
+    const directValue = window.localStorage.getItem(directKey);
+    if (directValue) {
+      try {
+        return normalizeSettingsVehicleImageSettings(JSON.parse(directValue));
+      } catch {
+        return DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS;
+      }
+    }
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const storageKey = window.localStorage.key(index);
+      if (!storageKey || (storageKey !== directKey && !storageKey.endsWith(directKey))) continue;
+
+      try {
+        const value = window.localStorage.getItem(storageKey);
+        if (value) return normalizeSettingsVehicleImageSettings(JSON.parse(value));
+      } catch {
+        return DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS;
+      }
+    }
+  }
+
+  return DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS;
+};
 
 const getStoredSettingsVehicleImageActiveEntryId = (vehicleId) => {
   if (!vehicleId || typeof window === "undefined") return null;
@@ -254,7 +354,12 @@ const getIndexedSettingsVehicleImage = async (vehicle) => {
       const activeRecord =
         records.find((record) => record.id === activeEntryId) || records[0];
       const dataUrl = normalizeSettingsImageValue(activeRecord?.dataUrl);
-      if (dataUrl) return dataUrl;
+      if (dataUrl) {
+        return {
+          dataUrl,
+          settings: normalizeSettingsVehicleImageSettings(activeRecord?.settings),
+        };
+      }
     } catch (error) {
       console.warn("[Settings] Could not load active vehicle image.", error);
     }
@@ -410,23 +515,31 @@ export default function Settings() {
   const [activeSettingsSection, setActiveSettingsSection] = useState(null);
   const [activeSettingsTitle, setActiveSettingsTitle] = useState("");
   const [activeVehicleImage, setActiveVehicleImage] = useState(null);
+  const [activeVehicleImageSettings, setActiveVehicleImageSettings] = useState(
+    DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS,
+  );
   useEffect(() => {
     let cancelled = false;
 
     const loadActiveVehicleImage = async () => {
       if (!activeVehicle) {
         setActiveVehicleImage(null);
+        setActiveVehicleImageSettings(DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS);
         return;
       }
 
       const indexedImage = await getIndexedSettingsVehicleImage(activeVehicle);
+      const storedSettings = getStoredSettingsVehicleImageSettings(activeVehicle);
       const image =
-        indexedImage ||
+        indexedImage?.dataUrl ||
         getSettingsStoredVehicleImage(activeVehicle) ||
         getSettingsVehicleObjectImage(activeVehicle) ||
         null;
 
-      if (!cancelled) setActiveVehicleImage(image);
+      if (!cancelled) {
+        setActiveVehicleImage(image);
+        setActiveVehicleImageSettings(indexedImage?.settings || storedSettings);
+      }
     };
 
     loadActiveVehicleImage();
@@ -1089,6 +1202,9 @@ export default function Settings() {
     getSettingsStoredVehicleImage(activeVehicle) ||
     getSettingsVehicleObjectImage(activeVehicle) ||
     getSettingsDefaultVehicleImage();
+  const profileVehicleImageSettings = scaleSettingsHeroImageSettings(
+    activeVehicleImageSettings,
+  );
   const settingsRows = [
     {
       title: "My Profile",
@@ -1119,8 +1235,8 @@ export default function Settings() {
       tone: "purple",
     },
     {
-      title: "Units & Display",
-      subtitle: "Customize units and appearance",
+      title: "Appearance & Language",
+      subtitle: "Theme, language and visual preferences",
       section: "display",
       icon: BarChart3,
       tone: "teal",
@@ -1198,7 +1314,12 @@ export default function Settings() {
               src={profileVehicleImage}
               alt={profileVehicleName}
               objectPosition="center right"
-              imageZoom={1.1}
+              imageOffsetX={profileVehicleImageSettings.offsetX}
+              imageOffsetY={profileVehicleImageSettings.offsetY}
+              imageZoom={profileVehicleImageSettings.zoom}
+              imageRotate={profileVehicleImageSettings.rotate}
+              imageFlipX={profileVehicleImageSettings.flipX}
+              imageFlipY={profileVehicleImageSettings.flipY}
               className="settings-profile-car-art"
             />
           </div>
@@ -1302,14 +1423,326 @@ export default function Settings() {
                 className="settings-sheet-body"
               >
 
+      {activeSettingsSection === "vehicles" && (
+        <section className="settings-panel-stack settings-panel-stack-vehicles">
+          <div className="settings-section-heading blue">
+            <CarFront className="h-4 w-4" strokeWidth={1.8} />
+            <span>Your Garage</span>
+          </div>
+
+          <div className="settings-vehicle-list">
+            {vehicles.map((vehicle) => {
+              const selected = vehicle.id === selectedVehicleId;
+              const editing = editingVehicleId === vehicle.id;
+              const tyreSize = vehicle.tyreSize || {};
+              const tyreLabel = `${tyreSize.width || "-"}/${tyreSize.aspectRatio || "-"} R${tyreSize.rimSize || "-"}`;
+              const vehicleThumb =
+                selected && profileVehicleImage
+                  ? profileVehicleImage
+                  : getSettingsVehicleObjectImage(vehicle) ||
+                    getSettingsStoredVehicleImage(vehicle) ||
+                    getSettingsDefaultVehicleImage();
+
+              return (
+                <article
+                  key={vehicle.id}
+                  className={cn("settings-vehicle-card", selected && "is-active")}
+                >
+                  <button
+                    type="button"
+                    className="settings-vehicle-select"
+                    onClick={() => setSelectedVehicleId(vehicle.id)}
+                    aria-label={`Select ${vehicle.name}`}
+                  >
+                    <span className="settings-vehicle-thumb">
+                      <img src={vehicleThumb} alt="" />
+                    </span>
+                    <span className="settings-vehicle-main">
+                      {editing ? (
+                        <Input
+                          value={editingName}
+                          onChange={(event) => setEditingName(event.target.value)}
+                          className="settings-inline-input"
+                          autoFocus
+                        />
+                      ) : (
+                        <strong>{vehicle.name}</strong>
+                      )}
+                      <small><Tire size={14} weight="duotone" /> {tyreLabel}</small>
+                    </span>
+                    <span className={cn("settings-active-dot", selected && "is-selected")}>
+                      {selected && <Check size={14} weight="bold" />}
+                    </span>
+                  </button>
+
+                  {editing && (
+                    <div className="settings-vehicle-edit-grid">
+                      <label>
+                        <span>Width</span>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          step="1"
+                          value={editingTyreSize.width ?? ""}
+                          onChange={(event) =>
+                            setEditingTyreSize((prev) => ({ ...prev, width: event.target.value }))
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Ratio</span>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          step="1"
+                          value={editingTyreSize.aspectRatio ?? ""}
+                          onChange={(event) =>
+                            setEditingTyreSize((prev) => ({ ...prev, aspectRatio: event.target.value }))
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Rim</span>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          step="1"
+                          value={editingTyreSize.rimSize ?? ""}
+                          onChange={(event) =>
+                            setEditingTyreSize((prev) => ({ ...prev, rimSize: event.target.value }))
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Tank</span>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.1"
+                          value={editingTankCapacity ?? ""}
+                          onChange={(event) => setEditingTankCapacity(event.target.value)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="settings-secondary-action"
+                        onClick={() => setEditingVehicleId(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="settings-primary-action compact"
+                        onClick={() => handleSaveEdit(vehicle.id)}
+                      >
+                        <FloppyDisk size={15} weight="duotone" /> Save Vehicle
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="settings-vehicle-actions">
+                    <button type="button" onClick={() => startEditing(vehicle)}>
+                      <Pencil size={16} weight="duotone" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="danger"
+                      disabled={vehicles.length <= 1}
+                      onClick={() =>
+                        setDeleteModal({
+                          isOpen: true,
+                          vehicleId: vehicle.id,
+                          vehicleName: vehicle.name,
+                        })
+                      }
+                    >
+                      <Trash size={16} weight="duotone" /> Delete
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <form className="settings-add-vehicle-card" onSubmit={handleCreateVehicle}>
+            <Input
+              value={newVehicleName}
+              onChange={(event) => setNewVehicleName(event.target.value)}
+              placeholder="New vehicle name"
+              className="settings-add-vehicle-input"
+            />
+            <button type="submit" aria-label="Add vehicle">
+              <Plus size={20} weight="bold" />
+            </button>
+          </form>
+
+          {activeVehicle && activeVehicleForm && (
+            <div className="settings-active-details-card">
+              <div className="settings-section-title-row">
+                <div>
+                  <span className="settings-section-kicker">Active Vehicle Details</span>
+                  <h3>{activeVehicle.name}</h3>
+                </div>
+                <button type="button" className="settings-primary-pill" onClick={handleSaveActiveVehicleDetails}>
+                  Save Details
+                </button>
+              </div>
+
+              <div className="settings-form-grid four">
+                <label className="settings-field">
+                  <span>Width</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    step="1"
+                    value={activeVehicleForm.tyreSize?.width ?? ""}
+                    onChange={(event) =>
+                      setActiveVehicleForm((prev) => ({
+                        ...prev,
+                        tyreSize: { ...prev.tyreSize, width: event.target.value },
+                      }))
+                    }
+                  />
+                </label>
+                <label className="settings-field">
+                  <span>Ratio</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    step="1"
+                    value={activeVehicleForm.tyreSize?.aspectRatio ?? ""}
+                    onChange={(event) =>
+                      setActiveVehicleForm((prev) => ({
+                        ...prev,
+                        tyreSize: { ...prev.tyreSize, aspectRatio: event.target.value },
+                      }))
+                    }
+                  />
+                </label>
+                <label className="settings-field">
+                  <span>Rim</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    step="1"
+                    value={activeVehicleForm.tyreSize?.rimSize ?? ""}
+                    onChange={(event) =>
+                      setActiveVehicleForm((prev) => ({
+                        ...prev,
+                        tyreSize: { ...prev.tyreSize, rimSize: event.target.value },
+                      }))
+                    }
+                  />
+                </label>
+                <label className="settings-field">
+                  <span>Liters</span>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    value={activeVehicleForm.tankCapacity ?? ""}
+                    onChange={(event) =>
+                      setActiveVehicleForm((prev) => ({ ...prev, tankCapacity: event.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+
+              <div className="settings-photo-note">
+                <Camera className="h-4 w-4" strokeWidth={1.8} />
+                <span>Vehicle photo and position are shared with the Dashboard photo manager.</span>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeSettingsSection === "fuel" && (
+        <section className="settings-panel-stack">
+          <div className="settings-section-heading green">
+            <NavigationArrow size={17} weight="duotone" />
+            <span>Location Services</span>
+          </div>
+          <div className="settings-panel-card compact">
+            <div className="settings-panel-row no-border">
+              <span className="settings-panel-icon green"><MapPin size={17} weight="duotone" /></span>
+              <div className="settings-panel-copy">
+                <h3>Station detection</h3>
+                <p>Suggest nearby or saved stations during fill-up entry.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={locationEnabled}
+                onClick={() => setLocationEnabled((value) => !value)}
+                className={cn("settings-switch", locationEnabled && "is-on")}
+              >
+                <span />
+              </button>
+            </div>
+            <button type="button" className="settings-text-action" onClick={handleClearLocationCache}>
+              Clear cached location and station suggestions
+            </button>
+          </div>
+
+          <div className="settings-section-heading orange">
+            <CurrencyDollar size={17} weight="duotone" />
+            <span>Global Fuel Prices</span>
+          </div>
+          <div className="settings-panel-card fuel-prices-card">
+            <div className="settings-form-grid">
+              <label className="settings-field">
+                <span>Petrol 92</span>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  value={priceForm[92]}
+                  onChange={(event) =>
+                    setPriceForm((prev) => ({ ...prev, 92: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="settings-field">
+                <span>Petrol 95</span>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  value={priceForm[95]}
+                  onChange={(event) =>
+                    setPriceForm((prev) => ({ ...prev, 95: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="settings-field wide">
+                <span>Diesel</span>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  value={priceForm.diesel}
+                  onChange={(event) =>
+                    setPriceForm((prev) => ({ ...prev, diesel: event.target.value }))
+                  }
+                />
+              </label>
+            </div>
+            <button type="button" className="settings-primary-action" onClick={handleSavePrices}>
+              <FloppyDisk size={16} weight="duotone" /> Save Prices
+            </button>
+          </div>
+        </section>
+      )}
+
       {activeSettingsSection === "reminders" && (
         <section className="settings-panel-stack">
-          <div className="settings-panel-card">
+          <div className="settings-panel-card compact">
             <div className="settings-panel-row no-border">
               <span className="settings-panel-icon amber"><LucideBell className="h-4 w-4" strokeWidth={1.8} /></span>
               <div className="settings-panel-copy">
-                <h3>{t("app_notifications") || "App notifications"}</h3>
-                <p>{notificationsEnabled ? t("app_notifications_enabled") : t("app_notifications_disabled")}</p>
+                <h3>App Notifications</h3>
+                <p>{notificationsEnabled ? "Maintenance and app reminders are enabled." : "Enable reminders for maintenance and alerts."}</p>
               </div>
               <button
                 type="button"
@@ -1325,35 +1758,63 @@ export default function Settings() {
             {!isNotificationSupported && <p className="settings-panel-warning">This browser does not support notifications.</p>}
             <p className="settings-panel-note">Permission: {permissionState || "default"}</p>
           </div>
+
+          <div className="settings-panel-card compact">
+            <div className="settings-panel-row no-border">
+              <span className="settings-panel-icon purple"><Wrench size={17} weight="duotone" /></span>
+              <div className="settings-panel-copy">
+                <h3>Maintenance Reminders</h3>
+                <p>Maintenance due-soon logic is controlled from the Maintenance section.</p>
+              </div>
+            </div>
+            <p className="settings-panel-note">This keeps reminder rules connected to real systems, categories, intervals and safety margins.</p>
+          </div>
         </section>
       )}
 
       {activeSettingsSection === "display" && (
         <section className="settings-panel-stack">
           <div className="settings-panel-card">
-            <h3 className="settings-panel-title">Theme</h3>
+            <div className="settings-section-title-row flat">
+              <div>
+                <span className="settings-section-kicker">Display</span>
+                <h3>Theme</h3>
+              </div>
+              <Palette size={18} weight="duotone" />
+            </div>
             <div className="settings-segmented-control">
-              {["light", "dark", "system"].map((themeOption) => (
+              {[
+                { id: "light", label: "Light" },
+                { id: "dark", label: "Dark" },
+                { id: "system", label: "System" },
+              ].map((themeOption) => (
                 <button
-                  key={themeOption}
+                  key={themeOption.id}
                   type="button"
-                  className={cn("settings-segment", theme === themeOption && "is-active")}
+                  className={cn("settings-segment", theme === themeOption.id && "is-active")}
                   onClick={() => {
-                    setTheme(themeOption);
+                    setTheme(themeOption.id);
                     showToast(t("updated") || "Updated");
                   }}
                 >
-                  {themeOption === "system" ? t("system_mode") : themeOption === "dark" ? t("dark_mode") : t("light_mode")}
+                  {themeOption.label}
                 </button>
               ))}
             </div>
           </div>
+
           <div className="settings-panel-card">
-            <h3 className="settings-panel-title">Language</h3>
-            <div className="settings-segmented-control">
+            <div className="settings-section-title-row flat">
+              <div>
+                <span className="settings-section-kicker">Language</span>
+                <h3>App Language</h3>
+              </div>
+              <Globe size={18} weight="duotone" />
+            </div>
+            <div className="settings-segmented-control two">
               {[
-                { id: "en", label: t("english") || "English" },
-                { id: "ar", label: t("arabic") || "Arabic" },
+                { id: "en", label: "English" },
+                { id: "ar", label: "Arabic" },
               ].map((lang) => (
                 <button
                   key={lang.id}
@@ -1369,13 +1830,24 @@ export default function Settings() {
               ))}
             </div>
           </div>
+
+          <div className="settings-panel-card compact muted">
+            <p className="settings-panel-note">
+              Unit conversion is intentionally not exposed here yet. When km/miles, liters/gallons,
+              currency, and efficiency formats are added, they must be wired across Dashboard, Add Fill-up,
+              History, Analytics, exports, and calculations.
+            </p>
+          </div>
         </section>
       )}
 
       {activeSettingsSection === "privacy" && (
         <section className="settings-panel-stack">
-          <div className="settings-panel-card">
-            <h3 className="settings-panel-title">Backup & restore</h3>
+          <div className="settings-section-heading green">
+            <Database size={17} weight="duotone" />
+            <span>Data Management</span>
+          </div>
+          <div className="settings-panel-card compact">
             <div className="settings-action-grid">
               <button type="button" onClick={() => setFormatModal({ isOpen: true, type: "export" })}>
                 <DownloadSimple weight="duotone" className="h-4 w-4" /> Export
@@ -1385,16 +1857,23 @@ export default function Settings() {
               </button>
             </div>
             <button type="button" className="settings-primary-action" onClick={handleOpenManualSync}>
-              <CloudArrowUp weight="duotone" className="h-4 w-4" /> Manual Sync
+              <CloudArrowUp weight="duotone" className="h-4 w-4" /> Manual Cloud Sync
             </button>
             <button type="button" className="settings-secondary-action" onClick={() => setCloudRestoreOpen(true)}>
               Cloud Restore
             </button>
           </div>
-          <div className="settings-panel-card danger">
-            <h3 className="settings-panel-title">Danger Zone</h3>
+
+          <div className="settings-panel-card danger compact">
+            <div className="settings-panel-row no-border">
+              <span className="settings-panel-icon danger"><WarningCircle size={17} weight="duotone" /></span>
+              <div className="settings-panel-copy">
+                <h3>Factory Reset</h3>
+                <p>Clear local app data after password confirmation.</p>
+              </div>
+            </div>
             <button type="button" className="settings-danger-action" onClick={() => setFactoryResetModal(true)}>
-              Reset app
+              Factory Reset
             </button>
           </div>
         </section>
@@ -1402,707 +1881,125 @@ export default function Settings() {
 
       {activeSettingsSection === "support" && (
         <section className="settings-panel-stack">
-          <div className="settings-panel-card">
-            <div className="settings-panel-row">
+          <div className="settings-panel-card compact">
+            <div className="settings-panel-row no-border">
               <span className="settings-panel-icon purple"><CircleHelp className="h-4 w-4" strokeWidth={1.8} /></span>
               <div className="settings-panel-copy">
                 <h3>Help & Support</h3>
                 <p>Quick troubleshooting and app maintenance tools.</p>
               </div>
             </div>
-            <button type="button" className="settings-secondary-action" onClick={handleManualAppUpdateCheck} disabled={isCheckingAppUpdate}>
-              {isCheckingAppUpdate ? t("checking_updates") : t("check_for_app_updates")}
+            <button type="button" className="settings-primary-action" onClick={handleManualAppUpdateCheck}>
+              <ArrowClockwise size={16} weight="duotone" /> Check for app updates
             </button>
-            <button type="button" className="settings-secondary-action" onClick={() => showToast("Support section opened")}>Contact support</button>
+            <button type="button" className="settings-secondary-action" onClick={() => showToast("Support contact is not configured yet.")}>Contact support</button>
+          </div>
+
+          <div className="settings-panel-card compact">
+            <h3 className="settings-panel-title">Troubleshooting</h3>
+            <p className="settings-panel-note">If a PWA update is stuck, use Check for app updates first. If data looks stale, try Manual Cloud Sync from Privacy.</p>
           </div>
         </section>
       )}
 
       {activeSettingsSection === "about" && (
         <section className="settings-panel-stack">
-          <div className="settings-panel-card">
+          <div className="settings-panel-card compact">
             <div className="settings-about-logo">SFT</div>
             <h3 className="settings-about-title">Simple Fuel Tracker</h3>
             <p className="settings-panel-note">A compact fuel, maintenance, and ownership tracker.</p>
             <div className="settings-info-grid">
-              <div><span>Version</span><strong>{APP_VERSION_LABEL}</strong></div>
-              <div><span>Build date</span><strong>{formatAppDate(APP_BUILD_DATE)}</strong></div>
+              <div>
+                <span>Version</span>
+                <strong>{APP_VERSION_LABEL}</strong>
+              </div>
+              <div>
+                <span>Build Date</span>
+                <strong>{formatAppDate(APP_BUILD_DATE)}</strong>
+              </div>
             </div>
-            <button type="button" className="settings-primary-action" onClick={handleManualAppUpdateCheck} disabled={isCheckingAppUpdate}>
-              {isCheckingAppUpdate ? t("checking_updates") : t("check_for_app_updates")}
+            <button type="button" className="settings-primary-action" onClick={handleManualAppUpdateCheck}>
+              <ArrowClockwise size={16} weight="duotone" /> Check for app updates
             </button>
           </div>
         </section>
       )}
 
-      {activeSettingsSection === "vehicles" && (
-        <>
-      <section>
-        <h3 className="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-          <Car weight="duotone" className="w-4 h-4" /> {t("your_garage")}
-        </h3>
-
-        <div className="space-y-3 mb-4">
-          {vehicles.map((v) => (
-            <div
-              key={v.id}
-              className={cn(
-                "glass-card group p-4 rounded-xl flex items-center justify-between shadow-sm dark:shadow-none border-slate-200 dark:border-slate-800",
-                v.id === selectedVehicleId &&
-                  "border-blue-500/50 bg-blue-50 dark:bg-blue-500/5",
-              )}
-            >
-              {editingVehicleId === v.id ? (
-                <div className="flex-1 me-3 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      autoFocus
-                      className="py-1.5 px-3 text-sm h-auto bg-slate-100 dark:bg-slate-900 focus:ring-blue-500/50 focus:border-blue-500/50"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveEdit(v.id);
-                        if (e.key === "Escape") setEditingVehicleId(null);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <button
-                      onClick={() => handleSaveEdit(v.id)}
-                      className="text-emerald-500 hover:text-emerald-400 p-1.5 bg-emerald-500/10 rounded-lg"
-                    >
-                      <Check weight="duotone" className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex-1">
-                    <Label className="text-[10px]">
-                      {t("tank_capacity")} ({t("liters")})
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={editingTankCapacity}
-                      onChange={(e) => setEditingTankCapacity(e.target.value)}
-                      className="py-1 px-2 text-xs h-auto bg-slate-100 dark:bg-slate-900"
-                      placeholder="e.g. 40"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <Tire weight="duotone" className="w-3 h-3" />{" "}
-                      {t("tyre_size")}
-                    </p>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        value={editingTyreSize.width || ""}
-                        onChange={(e) =>
-                          setEditingTyreSize((prev) => ({
-                            ...prev,
-                            width: parseInt(e.target.value) || 0,
-                          }))
-                        }
-                        className={cn(
-                          "py-1 px-2 text-xs h-auto",
-                          editingTyreSize.width === 0 && "border-red-500",
-                        )}
-                      />
-                      <Input
-                        type="number"
-                        value={editingTyreSize.aspectRatio || ""}
-                        onChange={(e) =>
-                          setEditingTyreSize((prev) => ({
-                            ...prev,
-                            aspectRatio: parseInt(e.target.value) || 0,
-                          }))
-                        }
-                        className={cn(
-                          "py-1 px-2 text-xs h-auto",
-                          editingTyreSize.aspectRatio === 0 && "border-red-500",
-                        )}
-                      />
-                      <Input
-                        type="number"
-                        value={editingTyreSize.rimSize || ""}
-                        onChange={(e) =>
-                          setEditingTyreSize((prev) => ({
-                            ...prev,
-                            rimSize: parseInt(e.target.value) || 0,
-                          }))
-                        }
-                        className={cn(
-                          "py-1 px-2 text-xs h-auto",
-                          editingTyreSize.rimSize === 0 && "border-red-500",
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className="flex-1 me-3 flex items-center gap-2 cursor-pointer"
-                  onClick={() => setSelectedVehicleId(v.id)}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${v.id === selectedVehicleId ? "border-blue-500 bg-blue-500 text-white" : "border-slate-300 dark:border-slate-700"}`}
-                  >
-                    {v.id === selectedVehicleId && (
-                      <Check weight="duotone" className="w-3 h-3" />
-                    )}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-900 dark:text-slate-200 block">
-                      {v.name}
-                    </span>
-                    {v.tyreSize && (
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                        <Tire weight="duotone" className="w-3 h-3" />{" "}
-                        {v.tyreSize.width}/{v.tyreSize.aspectRatio} R
-                        {v.tyreSize.rimSize}
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEditing(v);
-                    }}
-                    className="text-slate-400 hover:text-blue-400 p-1 opacity-40 group-hover:opacity-100 transition-opacity md:opacity-40 ms-auto"
-                  >
-                    <Pencil weight="duotone" className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-
-              <div className="shrink-0 flex items-center border-s border-slate-200 dark:border-slate-800 ps-2 ms-1">
-                <button
-                  onClick={() =>
-                    setDeleteModal({
-                      isOpen: true,
-                      vehicleId: v.id,
-                      vehicleName: v.name,
-                    })
-                  }
-                  disabled={vehicles.length === 1 || editingVehicleId === v.id}
-                  className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-2 disabled:opacity-20 disabled:hover:text-slate-400 transition-colors"
-                >
-                  <Trash weight="duotone" className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <form onSubmit={handleCreateVehicle} className="flex gap-2">
-          <Input
-            type="text"
-            placeholder={t("new_vehicle_placeholder")}
-            value={newVehicleName}
-            onChange={(e) => setNewVehicleName(e.target.value)}
-            className="py-3"
-          />
-          <button
-            type="submit"
-            disabled={!newVehicleName}
-            className="bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-slate-950 px-5 rounded-2xl font-bold transition flex items-center justify-center"
-          >
-            <Plus weight="duotone" className="w-5 h-5" />
-          </button>
-        </form>
-      </section>
-
-      <section className="pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2 ms-1">
-            <Tire weight="duotone" className="w-4 h-4" />{" "}
-            {t("active_vehicle_details")}
-          </h3>
-          {activeVehicleForm && (
-            <button
-              onClick={handleSaveActiveVehicleDetails}
-              className="bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-            >
-              {t("save_details")}
-            </button>
-          )}
-        </div>
-        <Card className="px-5 py-5 space-y-3">
-          {!activeVehicle || !activeVehicleForm ? (
-            <p className="text-sm text-slate-500">{t("no_vehicle_selected")}</p>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {activeVehicle.name}
-                </span>
-                {activeVehicleForm.tankCapacity && (
-                  <span className="text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-lg">
-                    {activeVehicleForm.tankCapacity}
-                    {t("liters_abbr")} {t("tank_capacity")}
-                  </span>
-                )}
-              </div>
-              <div className="grid grid-cols-4 gap-2 items-start mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
-                {["width", "aspectRatio", "rimSize"].map((field) => (
-                  <div key={field} className="flex flex-col">
-                    <Label className="text-[10px] mb-1.5 h-4">
-                      {t(
-                        field === "rimSize"
-                          ? "rim"
-                          : field === "aspectRatio"
-                            ? "ratio"
-                            : "width",
-                      )}
-                    </Label>
-                    <Input
-                      type="number"
-                      value={activeVehicleForm.tyreSize?.[field] || ""}
-                      onChange={(e) =>
-                        setActiveVehicleForm((prev) => ({
-                          ...prev,
-                          tyreSize: {
-                            ...prev.tyreSize,
-                            [field]: parseInt(e.target.value) || "",
-                          },
-                        }))
-                      }
-                      className="py-2 px-2 text-xs h-10"
-                    />
-                  </div>
-                ))}
-                <div className="flex flex-col">
-                  <Label className="text-[10px] mb-1.5 h-4 text-blue-600 dark:text-blue-400 font-bold">
-                    {t("liters")}
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={activeVehicleForm.tankCapacity || ""}
-                    onChange={(e) =>
-                      setActiveVehicleForm((prev) => ({
-                        ...prev,
-                        tankCapacity: parseFloat(e.target.value) || "",
-                      }))
-                    }
-                    className="py-2 px-2 text-xs h-10 bg-blue-50/50 dark:bg-blue-900/10"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </Card>
-      </section>
-        </>
-      )}
-
-      {activeSettingsSection === "app" && (
-        <>
-      {/* Language Section */}
-      <section className="pt-4">
-        <h3 className="text-xs font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-          <Globe weight="duotone" className="w-4 h-4" /> {t("language")}
-        </h3>
-        <Card className="px-5 py-6">
-          <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-2xl relative z-20">
-            {[
-              { id: "en", label: t("english") },
-              { id: "ar", label: t("arabic") },
-            ].map((lang) => (
-              <button
-                key={lang.id}
-                onClick={() => {
-                  i18n.changeLanguage(lang.id);
-                  showToast(t("updated"));
-                }}
-                className={`relative flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                  currentLanguage === lang.id
-                    ? "text-slate-900 dark:text-white"
-                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                }`}
-              >
-                {currentLanguage === lang.id && (
-                  <MotionDiv
-                    layoutId="settingsLangTab"
-                    className="absolute inset-0 bg-white dark:bg-orange-500 rounded-xl shadow-sm"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <span className="relative z-10">{lang.label}</span>
-              </button>
-            ))}
-          </div>
-        </Card>
-      </section>
-
-      <section className="pt-4">
-        <h3 className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-          <Palette weight="duotone" className="w-4 h-4" /> {t("theme_prefs")}
-        </h3>
-        <Card className="px-5 py-6">
-          <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-2xl relative z-20">
-            {["light", "dark", "system"].map((t_id) => (
-              <button
-                key={t_id}
-                onClick={() => setTheme(t_id)}
-                className={`relative flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all ${
-                  theme === t_id
-                    ? "text-slate-900 dark:text-white"
-                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                }`}
-              >
-                {theme === t_id && (
-                  <MotionDiv
-                    layoutId="settingsThemeTab"
-                    className="absolute inset-0 bg-white dark:bg-indigo-500 rounded-xl shadow-sm"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <span className="relative z-10">
-                  {t_id === "system"
-                    ? t("system_mode")
-                    : t_id === "dark"
-                      ? t("dark_mode")
-                      : t("light_mode")}
-                </span>
-              </button>
-            ))}
-          </div>
-        </Card>
-      </section>
-
-      <section className="pt-4">
-        <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-          <Bell weight="duotone" className="w-4 h-4" /> {t("notifications")}
-        </h3>
-        <Card className="px-5 py-6 space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white">
-                {t("app_notifications")}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {notificationsEnabled
-                  ? t("app_notifications_enabled")
-                  : t("app_notifications_disabled")}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={notificationsEnabled}
-              onClick={handleToggleNotifications}
-              className={`relative ms-1 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${notificationsEnabled ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationsEnabled ? (isRtl ? "-translate-x-6" : "translate-x-6") : isRtl ? "-translate-x-1" : "translate-x-1"}`}
-              />
-            </button>
-          </div>
-          {notificationError && (
-            <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
-              {notificationError}
-            </p>
-          )}
-        </Card>
-      </section>
-
-      <section className="pt-4">
-        <h3 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-          <ArrowClockwise weight="duotone" className="w-4 h-4" />{" "}
-          {t("app_updates")}
-        </h3>
-        <Card className="px-5 py-6 space-y-4">
-          <div>
-            <p className="text-sm font-medium text-slate-900 dark:text-white">
-              {t("check_for_app_updates")}
-            </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              {t("check_for_app_updates_description")}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-white/[0.04]">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                {t("current_app_version")}
-              </p>
-              <p className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">
-                {APP_VERSION_LABEL}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-white/[0.04]">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                {t("current_app_update_date")}
-              </p>
-              <p className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">
-                {formatAppDate(APP_BUILD_DATE)}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleManualAppUpdateCheck}
-            disabled={isCheckingAppUpdate}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950"
-          >
-            <ArrowClockwise
-              weight="duotone"
-              className={cn("h-4 w-4", isCheckingAppUpdate && "animate-spin")}
-            />
-            {isCheckingAppUpdate
-              ? t("checking_updates")
-              : t("check_for_app_updates")}
-          </button>
-        </Card>
-      </section>
-        </>
-      )}
-
-      {activeSettingsSection === "fuel" && (
-        <>
-      <section className="pt-4">
-        <h3 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-          <NavigationArrow weight="duotone" className="w-4 h-4" />{" "}
-          {t("location_services")}
-        </h3>
-        <Card className="px-5 py-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-900 dark:text-white">
-                {t("detection")}
-              </p>
-              <button
-                onClick={() => setLocationEnabled(!locationEnabled)}
-                className={`relative ms-1 inline-flex h-6 w-11 items-center rounded-full transition-colors ${locationEnabled ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${locationEnabled ? (isRtl ? "-translate-x-6" : "translate-x-6") : isRtl ? "-translate-x-1" : "translate-x-1"}`}
-                />
-              </button>
-            </div>
-            <button
-              onClick={handleClearLocationCache}
-              className="text-xs text-slate-500 dark:text-slate-400"
-            >
-              {t("clear_cache")}
-            </button>
-          </div>
-        </Card>
-      </section>
-
-      <section className="pt-4">
-        <h3 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-          <CurrencyDollar weight="duotone" className="w-4 h-4" />{" "}
-          {t("fuel_prices")}
-        </h3>
-        <Card className="px-5 py-6">
-          <div className="space-y-4">
-            {["92", "95", "diesel"].map((key) => (
-              <div key={key}>
-                <Label>
-                  {key === "diesel" ? t("petrol_diesel") : t("petrol_" + key)}
-                </Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={priceForm[key]}
-                  onChange={(e) =>
-                    setPriceForm({ ...priceForm, [key]: e.target.value })
-                  }
-                />
-              </div>
-            ))}
-            <button
-              onClick={handleSavePrices}
-              className="w-full py-3.5 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/20"
-            >
-              {t("save_prices")}
-            </button>
-          </div>
-        </Card>
-      </section>
-        </>
-      )}
-
-      {activeSettingsSection === "cloud" && (
-        <>
-          <section className="pt-4">
-            <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-              <Database weight="duotone" className="w-4 h-4" />{" "}
-              {t("backup_restore")}
-            </h3>
-            <Card className="px-5 py-6">
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <button
-                  onClick={() =>
-                    setFormatModal({ isOpen: true, type: "export" })
-                  }
-                  className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-bold text-sm"
-                >
-                  <DownloadSimple weight="duotone" size={18} />{" "}
-                  {t("export_data")}
-                </button>
-                <button
-                  onClick={() =>
-                    setFormatModal({ isOpen: true, type: "import" })
-                  }
-                  className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-bold text-sm"
-                >
-                  <UploadSimple weight="duotone" size={18} />{" "}
-                  {t("import_data")}
-                </button>
-              </div>
-              <button
-                onClick={handleOpenManualSync}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 transition"
-              >
-                <CloudArrowUp weight="duotone" size={18} /> Manual Sync
-              </button>
-            </Card>
-          </section>
-
-          <section className="pt-4">
-            <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-              <Database weight="duotone" className="w-4 h-4" /> Cloud Restore
-            </h3>
-            <Card className="px-5 py-6 space-y-4">
-              <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
-                  Restore records from cloud
-                </p>
-                <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
-                  Search cloud fill-ups and maintenance entries by date, then restore only the records you choose.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCloudRestoreOpen(true)}
-                className="w-full rounded-2xl bg-amber-500 px-4 py-4 text-sm font-black text-white shadow-lg shadow-amber-500/20 transition hover:bg-amber-400"
-              >
-                Cloud Restore
-              </button>
-            </Card>
-          </section>
-
-          <section className="pt-4">
-            <h3 className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-              <WarningCircle weight="duotone" className="w-4 h-4" /> Danger Zone
-            </h3>
-            <Card className="px-5 py-6">
-              <button
-                onClick={() => setFactoryResetModal(true)}
-                className="w-full py-4 rounded-[1.5rem] border border-red-500/20 text-red-500 font-bold hover:bg-red-500/10 transition flex justify-center gap-2 items-center"
-              >
-                {t("reset_app")}
-              </button>
-            </Card>
-          </section>
-        </>
-      )}
-
       {activeSettingsSection === "account" && (
-        <>
-      <section className="pt-4">
-        <h3 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2 ms-1">
-          <User weight="duotone" className="w-4 h-4" /> Account
-        </h3>
-        <Card className="px-5 py-6 space-y-5">
-          {accountError && (
-            <div className="p-3 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 text-xs font-bold">
-              {accountError}
+        <section className="settings-panel-stack">
+          <div className="settings-panel-card compact">
+            <div className="settings-panel-row no-border">
+              <span className="settings-panel-icon green"><User size={17} weight="duotone" /></span>
+              <div className="settings-panel-copy">
+                <h3>Profile</h3>
+                <p>Update your username and account basics.</p>
+              </div>
             </div>
-          )}
-
-          <div>
-            <Label className="flex items-center gap-2">
-              <User weight="duotone" className="w-4 h-4" /> Username
-            </Label>
-            <div className="flex gap-2">
+            <label className="settings-field wide">
+              <span>Username</span>
               <Input
-                type="text"
                 value={accountForm.username}
-                onChange={(e) =>
-                  setAccountForm((prev) => ({
-                    ...prev,
-                    username: e.target.value,
-                  }))
-                }
-                placeholder="username"
-                disabled={accountSaving}
+                onChange={(event) => setAccountForm((prev) => ({ ...prev, username: event.target.value }))}
               />
-              <button
-                type="button"
-                onClick={handleSaveUsername}
-                disabled={accountSaving || !accountForm.username.trim()}
-                className="px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold text-xs disabled:opacity-50"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label className="flex items-center gap-2">
-              <Key weight="duotone" className="w-4 h-4" /> Change Password
-            </Label>
-            <Input
-              type="password"
-              value={accountForm.oldPassword}
-              onChange={(e) =>
-                setAccountForm((prev) => ({
-                  ...prev,
-                  oldPassword: e.target.value,
-                }))
-              }
-              placeholder="Current password"
-              disabled={accountSaving}
-              readOnly={oldPasswordReadOnly}
-              onFocus={() => setOldPasswordReadOnly(false)}
-              autoComplete="off"
-            />
-            <Input
-              type="password"
-              value={accountForm.newPassword}
-              onChange={(e) =>
-                setAccountForm((prev) => ({
-                  ...prev,
-                  newPassword: e.target.value,
-                }))
-              }
-              placeholder="New password"
-              disabled={accountSaving}
-            />
-            <Input
-              type="password"
-              value={accountForm.confirmPassword}
-              onChange={(e) =>
-                setAccountForm((prev) => ({
-                  ...prev,
-                  confirmPassword: e.target.value,
-                }))
-              }
-              placeholder="Confirm password"
-              disabled={accountSaving}
-            />
+            </label>
             <button
               type="button"
+              className="settings-primary-action"
+              onClick={handleSaveUsername}
+              disabled={accountSaving || !accountForm.username.trim()}
+            >
+              Save Username
+            </button>
+            {accountError && <p className="settings-panel-warning">{accountError}</p>}
+          </div>
+
+          <div className="settings-panel-card compact">
+            <div className="settings-panel-row no-border">
+              <span className="settings-panel-icon blue"><Key size={17} weight="duotone" /></span>
+              <div className="settings-panel-copy">
+                <h3>Password</h3>
+                <p>Change your account password.</p>
+              </div>
+            </div>
+            <div className="settings-form-grid">
+              <label className="settings-field wide">
+                <span>Current Password</span>
+                <Input
+                  type="password"
+                  value={accountForm.oldPassword}
+                  readOnly={oldPasswordReadOnly}
+                  onFocus={() => setOldPasswordReadOnly(false)}
+                  onChange={(event) => setAccountForm((prev) => ({ ...prev, oldPassword: event.target.value }))}
+                />
+              </label>
+              <label className="settings-field">
+                <span>New Password</span>
+                <Input
+                  type="password"
+                  value={accountForm.newPassword}
+                  onChange={(event) => setAccountForm((prev) => ({ ...prev, newPassword: event.target.value }))}
+                />
+              </label>
+              <label className="settings-field">
+                <span>Confirm</span>
+                <Input
+                  type="password"
+                  value={accountForm.confirmPassword}
+                  onChange={(event) => setAccountForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              className="settings-secondary-action"
               onClick={handleChangePassword}
-              disabled={
-                accountSaving ||
-                !accountForm.oldPassword ||
-                !accountForm.newPassword ||
-                !accountForm.confirmPassword
-              }
-              className="w-full py-3 rounded-xl bg-emerald-500 text-white font-bold text-xs disabled:opacity-50"
+              disabled={accountSaving || !accountForm.oldPassword || !accountForm.newPassword || !accountForm.confirmPassword}
             >
               Update Password
             </button>
+            {accountError && <p className="settings-panel-warning">{accountError}</p>}
           </div>
-        </Card>
-      </section>
-
-        </>
+        </section>
       )}
               </MotionDiv>
             </MotionDiv>
