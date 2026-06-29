@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
-  Bell,
   Camera,
   Check,
   ChevronRight,
@@ -20,6 +19,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { useFuel } from "../hooks/useFuelContext";
 import { authService } from "../services/authService";
 import {
@@ -346,6 +346,8 @@ export default function DashboardPremium() {
   const navigate = useNavigate();
   const isRtl = i18n.language.startsWith("ar");
   const vehicleImageFileInputRef = useRef(null);
+  const dashboardToolsMenuRef = useRef(null);
+  const [dashboardToolsOpen, setDashboardToolsOpen] = useState(false);
   const [profileName, setProfileName] = useState("Peter");
   const [predictedModalOpen, setPredictedModalOpen] = useState(false);
   const [selectedMaintenanceDetail, setSelectedMaintenanceDetail] = useState(null);
@@ -378,6 +380,31 @@ export default function DashboardPremium() {
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleDashboardToolsOutside = (event) => {
+      if (
+        dashboardToolsMenuRef.current &&
+        !dashboardToolsMenuRef.current.contains(event.target)
+      ) {
+        setDashboardToolsOpen(false);
+      }
+    };
+
+    const handleDashboardToolsEscape = (event) => {
+      if (event.key === "Escape") {
+        setDashboardToolsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDashboardToolsOutside);
+    document.addEventListener("keydown", handleDashboardToolsEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDashboardToolsOutside);
+      document.removeEventListener("keydown", handleDashboardToolsEscape);
     };
   }, []);
 
@@ -937,7 +964,61 @@ export default function DashboardPremium() {
               activeVehicle={activeVehicle}
               className="dashboard-vehicle-chip"
             />
-            <IconButton icon={Bell} label="Notifications" className="dashboard-bell-button" />
+            <div className="dashboard-tools-control" ref={dashboardToolsMenuRef}>
+              <IconButton
+                icon={Wrench}
+                label="Tools"
+                className="dashboard-tools-trigger"
+                aria-haspopup="menu"
+                aria-expanded={dashboardToolsOpen}
+                onClick={() => setDashboardToolsOpen((open) => !open)}
+              />
+
+              <AnimatePresence>
+                {dashboardToolsOpen && (
+                  <Motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ type: "spring", stiffness: 340, damping: 26 }}
+                    className="dashboard-tools-menu"
+                    role="menu"
+                    aria-label="Dashboard tools"
+                  >
+                    <Link
+                      to="/trip-estimator"
+                      className="dashboard-tools-menu-item"
+                      role="menuitem"
+                      onClick={() => setDashboardToolsOpen(false)}
+                    >
+                      <Gauge className="h-4 w-4" strokeWidth={1.9} />
+                      <span>Trip Estimator</span>
+                      <ChevronRight className="dashboard-tools-menu-chevron h-4 w-4" strokeWidth={1.9} />
+                    </Link>
+                    <Link
+                      to="/tyre-calculator"
+                      className="dashboard-tools-menu-item"
+                      role="menuitem"
+                      onClick={() => setDashboardToolsOpen(false)}
+                    >
+                      <CircleDollarSign className="h-4 w-4" strokeWidth={1.9} />
+                      <span>Tire Comparison</span>
+                      <ChevronRight className="dashboard-tools-menu-chevron h-4 w-4" strokeWidth={1.9} />
+                    </Link>
+                    <Link
+                      to="/maintenance"
+                      className="dashboard-tools-menu-item"
+                      role="menuitem"
+                      onClick={() => setDashboardToolsOpen(false)}
+                    >
+                      <Wrench className="h-4 w-4" strokeWidth={1.9} />
+                      <span>Maintenance</span>
+                      <ChevronRight className="dashboard-tools-menu-chevron h-4 w-4" strokeWidth={1.9} />
+                    </Link>
+                  </Motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 

@@ -82,6 +82,11 @@ const cloudRestoreTypes = [
 const wait = (duration) =>
   new Promise((resolve) => setTimeout(resolve, duration));
 
+const toPositiveNumberOrNull = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
+};
+
 const formatAppDate = (value) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -503,7 +508,8 @@ export default function Settings() {
   });
   const [oldPasswordReadOnly, setOldPasswordReadOnly] = useState(true);
   const [accountSaving, setAccountSaving] = useState(false);
-  const [accountError, setAccountError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [notificationError, setNotificationError] = useState("");
   const [isCheckingAppUpdate, setIsCheckingAppUpdate] = useState(false);
   const [appUpdateCheckModal, setAppUpdateCheckModal] = useState({
@@ -518,6 +524,8 @@ export default function Settings() {
   const [activeVehicleImageSettings, setActiveVehicleImageSettings] = useState(
     DEFAULT_SETTINGS_VEHICLE_IMAGE_SETTINGS,
   );
+  const [settingsVehicleImages, setSettingsVehicleImages] = useState({});
+
   useEffect(() => {
     let cancelled = false;
 
@@ -561,6 +569,43 @@ export default function Settings() {
   useEffect(() => {
     let cancelled = false;
 
+    const loadVehicleImages = async () => {
+      const nextImages = {};
+
+      await Promise.all(
+        vehicles.map(async (vehicle) => {
+          const indexedImage = await getIndexedSettingsVehicleImage(vehicle);
+          const image =
+            indexedImage?.dataUrl ||
+            getSettingsStoredVehicleImage(vehicle) ||
+            getSettingsVehicleObjectImage(vehicle);
+
+          if (image) nextImages[vehicle.id] = image;
+        }),
+      );
+
+      if (!cancelled) setSettingsVehicleImages(nextImages);
+    };
+
+    loadVehicleImages();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", loadVehicleImages);
+      window.addEventListener("focus", loadVehicleImages);
+    }
+
+    return () => {
+      cancelled = true;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("storage", loadVehicleImages);
+        window.removeEventListener("focus", loadVehicleImages);
+      }
+    };
+  }, [vehicles]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     authService
       .getProfile()
       .then((profile) => {
@@ -594,8 +639,12 @@ export default function Settings() {
     if (editingName.trim()) {
       editVehicle(id, {
         name: editingName.trim(),
-        tyreSize: editingTyreSize,
-        tankCapacity: editingTankCapacity ? Number(editingTankCapacity) : null,
+        tyreSize: {
+          width: toPositiveNumberOrNull(editingTyreSize.width),
+          aspectRatio: toPositiveNumberOrNull(editingTyreSize.aspectRatio),
+          rimSize: toPositiveNumberOrNull(editingTyreSize.rimSize),
+        },
+        tankCapacity: toPositiveNumberOrNull(editingTankCapacity),
       });
       showToast(t("updated"));
     }
@@ -825,7 +874,8 @@ export default function Settings() {
   };
 
   const handleSaveUsername = async () => {
-    setAccountError("");
+    setUsernameError("");
+    setPasswordError("");
     setAccountSaving(true);
 
     try {
@@ -833,27 +883,28 @@ export default function Settings() {
       setAccountForm((prev) => ({ ...prev, username: profile.username }));
       showToast("Username updated");
     } catch (error) {
-      setAccountError(error.message || "Failed to update username.");
+      setUsernameError(error.message || "Failed to update username.");
     } finally {
       setAccountSaving(false);
     }
   };
 
   const handleChangePassword = async () => {
-    setAccountError("");
+    setPasswordError("");
+    setUsernameError("");
 
     if (!accountForm.oldPassword) {
-      setAccountError("Please enter your current password.");
+      setPasswordError("Please enter your current password.");
       return;
     }
 
     if (accountForm.newPassword.length < 6) {
-      setAccountError("Password must be at least 6 characters.");
+      setPasswordError("Password must be at least 6 characters.");
       return;
     }
 
     if (accountForm.newPassword !== accountForm.confirmPassword) {
-      setAccountError("Passwords do not match.");
+      setPasswordError("Passwords do not match.");
       return;
     }
 
@@ -869,7 +920,7 @@ export default function Settings() {
       }));
       showToast("Password updated");
     } catch (error) {
-      setAccountError(error.message || "Failed to update password.");
+      setPasswordError(error.message || "Failed to update password.");
     } finally {
       setAccountSaving(false);
     }
@@ -1151,13 +1202,18 @@ export default function Settings() {
     } else {
       // Check if anything actually changed
       const currentTyre = activeVehicle.tyreSize || {};
+      const nextTyre = {
+        width: toPositiveNumberOrNull(tyreSize.width),
+        aspectRatio: toPositiveNumberOrNull(tyreSize.aspectRatio),
+        rimSize: toPositiveNumberOrNull(tyreSize.rimSize),
+      };
       const hasTyreChanged =
-        tyreSize.width !== currentTyre.width ||
-        tyreSize.aspectRatio !== currentTyre.aspectRatio ||
-        tyreSize.rimSize !== currentTyre.rimSize;
+        nextTyre.width !== Number(currentTyre.width) ||
+        nextTyre.aspectRatio !== Number(currentTyre.aspectRatio) ||
+        nextTyre.rimSize !== Number(currentTyre.rimSize);
 
       const hasTankChanged =
-        parseFloat(tankCapacity) !== activeVehicle.tankCapacity;
+        toPositiveNumberOrNull(tankCapacity) !== Number(activeVehicle.tankCapacity);
 
       if (!hasTyreChanged && !hasTankChanged) {
         showToast(t("no_changes"));
@@ -1171,10 +1227,12 @@ export default function Settings() {
   const confirmSaveActiveVehicleDetails = () => {
     if (!activeVehicleForm) return;
     editVehicle(activeVehicle.id, {
-      tyreSize: activeVehicleForm.tyreSize,
-      tankCapacity: activeVehicleForm.tankCapacity
-        ? parseFloat(activeVehicleForm.tankCapacity)
-        : null,
+      tyreSize: {
+        width: toPositiveNumberOrNull(activeVehicleForm.tyreSize?.width),
+        aspectRatio: toPositiveNumberOrNull(activeVehicleForm.tyreSize?.aspectRatio),
+        rimSize: toPositiveNumberOrNull(activeVehicleForm.tyreSize?.rimSize),
+      },
+      tankCapacity: toPositiveNumberOrNull(activeVehicleForm.tankCapacity),
     });
     setValidationModal({ isOpen: false });
     showToast(t("details_saved"));
@@ -1439,6 +1497,8 @@ export default function Settings() {
               const vehicleThumb =
                 selected && profileVehicleImage
                   ? profileVehicleImage
+                  : settingsVehicleImages[vehicle.id]
+                    ? settingsVehicleImages[vehicle.id]
                   : getSettingsVehicleObjectImage(vehicle) ||
                     getSettingsStoredVehicleImage(vehicle) ||
                     getSettingsDefaultVehicleImage();
@@ -1950,7 +2010,7 @@ export default function Settings() {
             >
               Save Username
             </button>
-            {accountError && <p className="settings-panel-warning">{accountError}</p>}
+            {usernameError && <p className="settings-panel-warning">{usernameError}</p>}
           </div>
 
           <div className="settings-panel-card compact">
@@ -1991,13 +2051,13 @@ export default function Settings() {
             </div>
             <button
               type="button"
-              className="settings-secondary-action"
+              className="settings-secondary-action settings-account-password-action"
               onClick={handleChangePassword}
               disabled={accountSaving || !accountForm.oldPassword || !accountForm.newPassword || !accountForm.confirmPassword}
             >
               Update Password
             </button>
-            {accountError && <p className="settings-panel-warning">{accountError}</p>}
+            {passwordError && <p className="settings-panel-warning">{passwordError}</p>}
           </div>
         </section>
       )}
@@ -3046,7 +3106,7 @@ export default function Settings() {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-full shadow-lg z-50 text-sm font-bold"
+            className="settings-floating-toast"
           >
             {toastMessage}
           </MotionDiv>

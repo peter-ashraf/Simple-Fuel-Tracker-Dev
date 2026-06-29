@@ -51,6 +51,31 @@ function formatNumericInputValue(value) {
   return `${sign}${formattedInteger}${decimalPart !== undefined ? `.${decimalPart}` : ""}`;
 }
 
+function sanitizeNumericInputValue(value, { allowDecimal, allowNegative }) {
+  const raw = String(value ?? "").replace(/,/g, "");
+  let sanitized = "";
+  let hasDecimal = false;
+
+  for (const char of raw) {
+    if (/\d/.test(char)) {
+      sanitized += char;
+      continue;
+    }
+
+    if (allowDecimal && char === "." && !hasDecimal) {
+      sanitized += char;
+      hasDecimal = true;
+      continue;
+    }
+
+    if (allowNegative && char === "-" && sanitized.length === 0) {
+      sanitized += char;
+    }
+  }
+
+  return sanitized;
+}
+
 export const Input = forwardRef(({ className, inputMode, type, step, value, onChange, ...props }, ref) => {
   const isNumeric = type === "number";
   const displayValue = isNumeric ? formatNumericInputValue(value) : value;
@@ -61,7 +86,10 @@ export const Input = forwardRef(({ className, inputMode, type, step, value, onCh
       return;
     }
 
-    const rawValue = event.target.value.replace(/,/g, "");
+    const rawValue = sanitizeNumericInputValue(event.target.value, {
+      allowDecimal: step !== "1" && inputMode !== "numeric",
+      allowNegative: Number(props.min) < 0,
+    });
     onChange({
       ...event,
       target: { ...event.target, value: rawValue },

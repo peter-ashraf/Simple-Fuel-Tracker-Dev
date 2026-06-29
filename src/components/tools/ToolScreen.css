@@ -1,0 +1,1010 @@
+.tool-screen {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(32, 230, 183, 0.12), transparent 28rem),
+    radial-gradient(circle at 84% 20%, rgba(56, 189, 248, 0.1), transparent 24rem),
+    linear-gradient(180deg, #03070d 0%, #07111c 46%, #03070d 100%);
+  color: #f8fafc;
+  padding: max(1.25rem, env(safe-area-inset-top)) 1rem calc(10.5rem + env(safe-area-inset-bottom));
+}
+
+.tool-content {
+  width: min(100%, 56rem);
+  margin: 0 auto;
+}
+
+.tool-glass-panel,
+.tool-card,
+.tool-empty-card,
+.tool-empty-state {
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  background:
+    linear-gradient(140deg, rgba(15, 32, 48, 0.92), rgba(5, 12, 22, 0.92)),
+    radial-gradient(circle at 82% 18%, rgba(45, 212, 191, 0.16), transparent 18rem);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 24px 70px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.tool-card {
+  border-radius: 1.35rem;
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+  position: relative;
+  overflow: visible;
+}
+
+.tool-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 78%, transparent);
+}
+
+.tool-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.tool-hero-title {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2rem 0 1rem;
+}
+
+.tool-hero-title h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 9vw, 4.5rem);
+  line-height: 0.98;
+  font-weight: 900;
+  letter-spacing: 0;
+  color: #fff;
+}
+
+.tool-hero-title p,
+.tool-section-heading p {
+  margin: 0.55rem 0 0;
+  color: #aab4c5;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.tool-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.tool-section-heading.compact {
+  margin-bottom: 0.8rem;
+}
+
+.tool-section-heading h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.22rem;
+  font-weight: 850;
+}
+
+.tool-section-icon,
+.tool-option-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  border-radius: 0.95rem;
+  color: #54f4da;
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  box-shadow: inset 0 0 24px rgba(45, 212, 191, 0.08);
+}
+
+.tool-section-icon svg,
+.tool-option-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.tool-section-icon.is-blue {
+  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.14);
+  border-color: rgba(96, 165, 250, 0.24);
+}
+
+.tool-section-icon.is-teal {
+  color: #2dd4bf;
+}
+
+.tool-section-icon.is-purple {
+  color: #a855f7;
+  background: rgba(126, 34, 206, 0.16);
+  border-color: rgba(168, 85, 247, 0.28);
+}
+
+.tool-pill-button,
+.tool-select-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  min-height: 3.5rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(10, 18, 29, 0.72);
+  color: #f8fafc;
+  font-weight: 780;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.tool-pill-button svg,
+.tool-select-button svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.tool-select-wrap {
+  position: relative;
+}
+
+.tool-select-caret {
+  transition: transform 180ms ease;
+}
+
+.tool-select-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.tool-select-menu {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  min-width: 10rem;
+  z-index: 50;
+  padding: 0.45rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(5, 12, 22, 0.98);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
+.tool-select-menu-right {
+  right: 0;
+}
+
+.tool-select-menu-left {
+  left: 0;
+}
+
+.tool-select-option {
+  width: 100%;
+  min-height: 2.6rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: #cbd5e1;
+  font-weight: 760;
+  text-align: left;
+  padding: 0 0.8rem;
+}
+
+.tool-select-option.is-active,
+.tool-select-option:hover {
+  background: rgba(32, 230, 183, 0.14);
+  color: #67ffe6;
+}
+
+.tool-option-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 5.2rem;
+}
+
+.tool-option-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.tool-option-copy span,
+.trip-input-copy strong {
+  color: #f8fafc;
+  font-size: 1rem;
+  font-weight: 780;
+}
+
+.tool-option-copy small,
+.trip-input-copy span {
+  color: #94a3b8;
+  font-size: 0.92rem;
+}
+
+.tool-switch {
+  width: 4.2rem;
+  height: 2.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  padding: 0.18rem;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.tool-switch span {
+  display: block;
+  width: 1.68rem;
+  height: 1.68rem;
+  border-radius: 999px;
+  background: #f8fafc;
+  transition: transform 180ms ease;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.34);
+}
+
+.tool-switch.is-on {
+  border-color: rgba(45, 212, 191, 0.56);
+  background: linear-gradient(135deg, #18c9b1, #0f766e);
+}
+
+.tool-switch.is-on span {
+  transform: translateX(2.05rem);
+}
+
+.tool-empty-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+}
+
+.tool-empty-card > span,
+.tool-empty-state > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  color: #22d3ee;
+  background: rgba(8, 145, 178, 0.16);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  box-shadow: 0 0 34px rgba(34, 211, 238, 0.12);
+}
+
+.tool-empty-card svg,
+.tool-empty-state svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.tool-empty-card h2,
+.tool-empty-state h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.25rem;
+  font-weight: 850;
+}
+
+.tool-empty-card p,
+.tool-empty-state p {
+  margin: 0.35rem 0 0;
+  color: #aab4c5;
+  line-height: 1.5;
+}
+
+.tool-empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 15rem;
+  padding: 2rem;
+  text-align: center;
+  border-style: dashed;
+  border-radius: 1.35rem;
+}
+
+.tool-empty-state p {
+  max-width: 26rem;
+}
+
+.tool-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 80;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  background:
+    linear-gradient(180deg, rgba(3, 7, 13, 0), rgba(3, 7, 13, 0.78) 24%),
+    rgba(3, 7, 13, 0.72);
+  backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.tool-action-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  width: min(100%, 56rem);
+  margin: 0 auto;
+}
+
+.tool-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 4.45rem;
+  border-radius: 1.05rem;
+  font-size: 1.05rem;
+  font-weight: 850;
+  transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+}
+
+.tool-action-button:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.tool-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.tool-action-primary {
+  border: 1px solid rgba(103, 232, 249, 0.7);
+  background: linear-gradient(135deg, #5eead4 0%, #06b6d4 46%, #0f766e 100%);
+  color: #031014;
+  box-shadow: 0 0 34px rgba(34, 211, 238, 0.34);
+}
+
+.tool-action-secondary {
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  background: linear-gradient(145deg, rgba(19, 31, 45, 0.96), rgba(8, 14, 24, 0.96));
+  color: #e2e8f0;
+}
+
+.tool-action-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.tool-metric-list {
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 1.05rem;
+}
+
+.tool-metric-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.tool-metric-list > div:last-child {
+  border-bottom: 0;
+}
+
+.tool-metric-list span {
+  color: #aab4c5;
+}
+
+.tool-metric-list strong {
+  color: #f8fafc;
+  text-align: right;
+}
+
+.tool-tone-good {
+  color: #4ade80 !important;
+}
+
+.tool-tone-warn {
+  color: #facc15 !important;
+}
+
+.tool-tone-caution {
+  color: #fb923c !important;
+}
+
+.tool-tone-muted {
+  color: #94a3b8 !important;
+}
+
+.tool-note {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 0.95rem;
+  border-radius: 1rem;
+  margin-top: 1rem;
+}
+
+.tool-note svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+}
+
+.tool-note strong,
+.tool-note span {
+  display: block;
+}
+
+.tool-note strong {
+  color: #f8fafc;
+  margin-bottom: 0.1rem;
+}
+
+.tool-note span {
+  color: #cbd5e1;
+  font-size: 0.88rem;
+}
+
+.tool-note.is-warning {
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+}
+
+.tool-vehicle-art.vehicle-art {
+  width: 9.5rem;
+  height: 5.6rem;
+  min-height: 0;
+}
+
+.tool-vehicle-art.vehicle-art-with-photo .vehicle-photo-shell {
+  inset: 0;
+}
+
+.tool-vehicle-art.vehicle-art-with-photo .vehicle-art-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tool-status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #54f4da;
+  font-weight: 760;
+}
+
+.tool-status-dot::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 16px currentColor;
+}
+
+@media (max-width: 640px) {
+  .tool-screen {
+    padding-inline: 0.9rem;
+  }
+
+  .tool-card {
+    padding: 1rem;
+    border-radius: 1.15rem;
+  }
+
+  .tool-hero-title {
+    align-items: flex-start;
+  }
+
+  .tool-hero-title h1 {
+    font-size: clamp(2.35rem, 12vw, 3.5rem);
+  }
+
+  .tool-action-inner {
+    gap: 0.7rem;
+  }
+
+  .tool-action-button {
+    min-height: 4rem;
+    border-radius: 0.95rem;
+  }
+}
+
+
+/* =========================================================
+   Quick-action tools polish pass
+   - Compact one-page-first layout
+   - Unified teal buttons
+   - Dropdowns always above following cards
+   ========================================================= */
+.tool-screen {
+  padding: max(0.75rem, env(safe-area-inset-top)) 0.9rem calc(8.5rem + env(safe-area-inset-bottom)) !important;
+}
+.tool-content {
+  width: min(100%, 430px) !important;
+  max-width: 430px !important;
+}
+.tool-card {
+  margin-top: 0.75rem !important;
+  padding: 0.85rem !important;
+  border-radius: 1.15rem !important;
+}
+.tool-section-heading {
+  gap: 0.65rem !important;
+  margin-bottom: 0.7rem !important;
+}
+.tool-section-heading h2 {
+  font-size: 1rem !important;
+  line-height: 1.12 !important;
+  font-weight: 820 !important;
+}
+.tool-section-heading p,
+.tool-hero-title p {
+  margin-top: 0.25rem !important;
+  font-size: 0.78rem !important;
+  line-height: 1.25 !important;
+}
+.tool-section-icon,
+.tool-option-icon {
+  width: 2.15rem !important;
+  height: 2.15rem !important;
+  border-radius: 0.75rem !important;
+}
+.tool-section-icon svg,
+.tool-option-icon svg {
+  width: 1.15rem !important;
+  height: 1.15rem !important;
+}
+.tool-hero-title {
+  margin: 1rem 0 0.65rem !important;
+  align-items: center !important;
+}
+.tool-hero-title h1 {
+  font-size: clamp(1.65rem, 7vw, 2rem) !important;
+  line-height: 1.02 !important;
+  letter-spacing: -0.035em !important;
+}
+.tool-pill-button,
+.tool-select-button {
+  min-height: 2.65rem !important;
+  border-radius: 0.85rem !important;
+  font-size: 0.82rem !important;
+}
+.tool-option-row {
+  min-height: 3.05rem !important;
+  gap: 0.65rem !important;
+}
+.tool-option-copy span,
+.trip-input-copy strong {
+  font-size: 0.86rem !important;
+  line-height: 1.15 !important;
+}
+.tool-option-copy small,
+.trip-input-copy span {
+  font-size: 0.74rem !important;
+  line-height: 1.2 !important;
+}
+.tool-switch {
+  width: 3.1rem !important;
+  height: 1.65rem !important;
+}
+.tool-switch span {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+.tool-switch.is-on span {
+  transform: translateX(1.35rem) !important;
+}
+.tool-action-bar {
+  padding: 0.7rem 0.9rem calc(0.65rem + env(safe-area-inset-bottom)) !important;
+  background: rgba(3, 7, 13, 0.82) !important;
+  border-top: 1px solid rgba(120, 210, 220, 0.14) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+.tool-action-inner {
+  width: min(100%, 430px) !important;
+  gap: 0.65rem !important;
+}
+.tool-action-button {
+  min-height: 3.45rem !important;
+  border-radius: 1rem !important;
+  font-size: 0.98rem !important;
+  font-weight: 800 !important;
+}
+.tool-action-primary,
+.tyre-primary-action,
+.tyre-save-action {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,.28), transparent 42%),
+    linear-gradient(135deg, #27e0c4, #02a878) !important;
+  color: #041016 !important;
+  border: 1px solid rgba(91, 255, 226, 0.72) !important;
+  box-shadow: 0 0 26px rgba(32, 230, 183, 0.28) !important;
+}
+.tool-action-secondary {
+  background: rgba(12, 26, 42, 0.86) !important;
+  border: 1px solid rgba(120, 210, 220, 0.24) !important;
+  color: #dbe7f5 !important;
+}
+.tool-select-wrap,
+.tool-tools-wrap {
+  position: relative !important;
+  z-index: 40 !important;
+}
+.tool-select-wrap:focus-within,
+.tool-tools-wrap:focus-within {
+  z-index: 2000 !important;
+}
+.tool-card:has(.tool-select-wrap:focus-within),
+.tool-card:has(.tool-tools-wrap:focus-within) {
+  z-index: 1000 !important;
+}
+.tool-select-menu,
+.tool-tools-menu {
+  z-index: 3000 !important;
+  overflow: visible !important;
+}
+.tool-select-menu {
+  min-width: 100% !important;
+  border-radius: 1rem !important;
+  border: 1px solid rgba(120, 210, 220, 0.24) !important;
+  background:
+    radial-gradient(circle at 82% 0%, rgba(32, 230, 183, 0.13), transparent 8rem),
+    rgba(5, 13, 22, 0.98) !important;
+  box-shadow: 0 18px 52px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+.tool-select-option {
+  min-height: 2.25rem !important;
+  font-size: 0.78rem !important;
+}
+.tool-tools-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(13.5rem, calc(100vw - 2rem));
+  padding: 0.45rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(120, 210, 220, 0.24);
+  background:
+    radial-gradient(circle at 80% 0%, rgba(32, 230, 183, 0.14), transparent 8rem),
+    rgba(5, 13, 22, 0.97);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.tool-tools-menu-item {
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0,1fr) 1rem;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0 0.65rem;
+  border: 0;
+  border-radius: 0.78rem;
+  background: transparent;
+  color: #c9d7e7;
+  font-size: 0.8rem;
+  font-weight: 760;
+  text-align: left;
+}
+.tool-tools-menu-item svg:first-child {
+  width: 1rem;
+  height: 1rem;
+  color: #20e6b7;
+}
+.tool-tools-menu-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-tools-menu-item:hover,
+.tool-tools-menu-item:focus-visible,
+.tool-tools-menu-item.is-active {
+  outline: none;
+  background: rgba(32, 230, 183, 0.13);
+  color: #f5faff;
+}
+.tool-menu-next {
+  transform: rotate(180deg);
+  opacity: .65;
+}
+.tool-empty-card,
+.tool-empty-state {
+  min-height: 8rem !important;
+  padding: 1rem !important;
+  border-radius: 1.15rem !important;
+}
+.tool-empty-state h3,
+.tool-empty-card h2 {
+  font-size: 1rem !important;
+}
+.tool-empty-state p,
+.tool-empty-card p {
+  font-size: .8rem !important;
+  line-height: 1.35 !important;
+}
+
+/* =========================================================
+   Final quick-action correction
+   These tools are calculators, not long content feeds. Keep them compact,
+   keep dropdowns above cards, and keep fixed actions from eating the screen.
+   ========================================================= */
+.tool-screen {
+  padding: max(0.65rem, env(safe-area-inset-top)) 0.65rem calc(5.9rem + env(safe-area-inset-bottom)) !important;
+}
+
+.tool-content {
+  width: min(100%, 430px) !important;
+}
+
+.tool-card {
+  margin-top: 0.65rem !important;
+  padding: 0.72rem !important;
+  border-radius: 18px !important;
+  overflow: visible !important;
+}
+
+.tool-card:has(.tool-select-menu),
+.tool-card:has(.tool-tools-menu),
+.trip-control-panel:has(.tool-select-menu),
+.tyre-input-card:has(.tool-select-menu) {
+  z-index: 220 !important;
+}
+
+.tool-hero-title {
+  align-items: flex-start !important;
+  margin: 0.75rem 0.1rem 0.55rem !important;
+}
+
+.tool-hero-title h1 {
+  font-size: clamp(1.7rem, 7vw, 2.05rem) !important;
+  line-height: 1.02 !important;
+  letter-spacing: -0.045em !important;
+}
+
+.tool-hero-title p,
+.tool-section-heading p {
+  margin-top: 0.22rem !important;
+  font-size: 0.78rem !important;
+  line-height: 1.25 !important;
+}
+
+.tool-section-heading {
+  gap: 0.58rem !important;
+  margin-bottom: 0.58rem !important;
+}
+
+.tool-section-heading h2 {
+  font-size: 0.98rem !important;
+  line-height: 1.08 !important;
+  font-weight: 820 !important;
+}
+
+.tool-section-icon,
+.tool-option-icon {
+  width: 2.3rem !important;
+  height: 2.3rem !important;
+  border-radius: 0.75rem !important;
+}
+
+.tool-section-icon svg,
+.tool-option-icon svg {
+  width: 1.18rem !important;
+  height: 1.18rem !important;
+}
+
+.tool-pill-button,
+.tool-select-button {
+  min-height: 2.7rem !important;
+  border-radius: 0.78rem !important;
+  gap: 0.45rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 780 !important;
+}
+
+.tool-select-wrap {
+  position: relative !important;
+  z-index: 260 !important;
+}
+
+.tool-select-menu,
+.tool-tools-menu {
+  z-index: 9999 !important;
+  border-radius: 15px !important;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(32, 230, 183, .14), transparent 8rem),
+    rgba(5, 14, 22, .985) !important;
+  border: 1px solid rgba(93, 222, 210, .25) !important;
+  box-shadow: 0 22px 58px rgba(0, 0, 0, .58), inset 0 1px 0 rgba(255,255,255,.07) !important;
+  backdrop-filter: blur(22px) !important;
+  -webkit-backdrop-filter: blur(22px) !important;
+}
+
+.tool-select-option {
+  min-height: 2.25rem !important;
+  font-size: 0.78rem !important;
+  border-radius: 0.65rem !important;
+}
+
+.tool-tools-wrap {
+  position: relative;
+  z-index: 300;
+}
+
+.tool-tools-trigger[aria-expanded="true"] {
+  border-color: rgba(32, 230, 183, .52) !important;
+  color: #5fffe6 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 20px rgba(32,230,183,.16) !important;
+}
+
+.tool-tools-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(220px, calc(100vw - 1.8rem));
+  padding: 0.45rem;
+}
+
+.tool-tools-menu-item {
+  width: 100%;
+  min-height: 2.55rem;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: #cbd5e1;
+  text-align: left;
+  padding: 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.tool-tools-menu-item svg {
+  width: 2rem;
+  height: 2rem;
+  padding: 0.48rem;
+  border-radius: 0.7rem;
+  color: #48f4dc;
+  background: rgba(32,230,183,.1);
+  border: 1px solid rgba(32,230,183,.2);
+}
+
+.tool-tools-menu-item:hover,
+.tool-tools-menu-item:focus-visible,
+.tool-tools-menu-item.is-active {
+  background: rgba(32,230,183,.14);
+  color: #f8fafc;
+  outline: 0;
+}
+
+.tool-option-row {
+  min-height: 3.15rem !important;
+  gap: 0.62rem !important;
+  padding: 0 0.58rem !important;
+}
+
+.tool-option-copy span,
+.trip-input-copy strong {
+  font-size: 0.82rem !important;
+  font-weight: 780 !important;
+}
+
+.tool-option-copy small,
+.trip-input-copy span {
+  font-size: 0.72rem !important;
+  line-height: 1.15 !important;
+}
+
+.tool-switch {
+  width: 3rem !important;
+  height: 1.55rem !important;
+  padding: 0.14rem !important;
+}
+
+.tool-switch span {
+  width: 1.22rem !important;
+  height: 1.22rem !important;
+}
+
+.tool-switch.is-on span {
+  transform: translateX(1.45rem) !important;
+}
+
+.tool-empty-card {
+  min-height: 4.8rem !important;
+  margin-top: 0.65rem !important;
+  padding: 0.75rem !important;
+  border-radius: 1rem !important;
+}
+
+.tool-empty-state {
+  min-height: 7rem !important;
+  padding: 0.9rem !important;
+  border-radius: 1rem !important;
+}
+
+.tool-empty-card > span,
+.tool-empty-state > span {
+  width: 2.8rem !important;
+  height: 2.8rem !important;
+}
+
+.tool-empty-card h2,
+.tool-empty-state h3 {
+  font-size: 0.98rem !important;
+}
+
+.tool-empty-card p,
+.tool-empty-state p {
+  font-size: 0.78rem !important;
+  line-height: 1.35 !important;
+}
+
+.tool-action-bar {
+  z-index: 900 !important;
+  padding: 0.55rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom)) !important;
+}
+
+.tool-action-inner {
+  width: min(100%, 430px) !important;
+  gap: 0.5rem !important;
+}
+
+.tool-action-button {
+  min-height: 3.2rem !important;
+  border-radius: 0.9rem !important;
+  gap: 0.45rem !important;
+  font-size: 0.82rem !important;
+  line-height: 1 !important;
+  font-weight: 820 !important;
+}
+
+.tool-action-icon {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+}
+
+.tool-metric-list {
+  border-radius: 0.85rem !important;
+}
+
+.tool-metric-list > div {
+  min-height: 2.35rem !important;
+  padding: 0 0.7rem !important;
+  font-size: 0.78rem !important;
+}
+
+@media (max-width: 640px) {
+  .tool-screen {
+    padding-inline: 0.65rem !important;
+  }
+
+  .tool-card {
+    padding: 0.7rem !important;
+  }
+
+  .tool-hero-title h1 {
+    font-size: clamp(1.75rem, 7.5vw, 2.08rem) !important;
+  }
+}

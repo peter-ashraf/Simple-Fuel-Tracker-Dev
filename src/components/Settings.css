@@ -353,15 +353,15 @@
 
 .settings-menu-row {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 18px;
+  grid-template-columns: 44px minmax(0, 1fr) 18px;
   width: 100%;
-  min-height: 74px;
+  min-height: 63px;
   align-items: center;
-  gap: 13px;
+  gap: 11px;
   border: 0;
   border-bottom: 1px solid rgba(20, 50, 80, 0.08);
   background: transparent;
-  padding: 0 17px;
+  padding: 0 15px;
   color: var(--text-primary);
   text-align: start;
 }
@@ -380,11 +380,11 @@
 
 .settings-menu-icon {
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   place-items: center;
   border: 1px solid currentColor;
-  border-radius: 15px;
+  border-radius: 14px;
   background: color-mix(in srgb, currentColor 13%, transparent);
 }
 
@@ -404,7 +404,7 @@
 .settings-menu-label {
   overflow: hidden;
   color: var(--text-primary);
-  font-size: 17px;
+  font-size: 15.5px;
   font-weight: 640;
   letter-spacing: -0.025em;
   line-height: 1.05;
@@ -415,7 +415,7 @@
 .settings-menu-subtitle {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 13.5px;
+  font-size: 12.3px;
   font-weight: 450;
   line-height: 1.12;
   text-overflow: ellipsis;
@@ -1446,5 +1446,89 @@
   .settings-vehicle-thumb {
     width: 48px;
     height: 38px;
+  }
+}
+
+/* Account panel specific spacing/errors */
+.settings-account-password-action {
+  margin-top: 12px;
+}
+
+/* Keep confirmations above Settings sheets and shared modals. */
+.settings-floating-toast {
+  position: fixed;
+  left: 50%;
+  right: auto;
+  bottom: calc(118px + env(safe-area-inset-bottom));
+  z-index: 220;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 40px);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #29d8b8, #05a878);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1;
+  text-align: center;
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.34),
+    0 0 28px rgba(32, 230, 183, 0.28);
+  pointer-events: none;
+}
+
+/* Reference-density correction for 430px phone viewports. */
+@media (max-width: 430px) {
+  .settings-fixed-zone {
+    padding-top: calc(26px + env(safe-area-inset-top)) !important;
+    padding-bottom: 8px !important;
+  }
+
+  .settings-premium-scroll {
+    padding-top: calc(204px + env(safe-area-inset-top)) !important;
+  }
+
+  .settings-page-header {
+    margin-bottom: 10px !important;
+  }
+
+  .settings-profile-hero {
+    min-height: 102px !important;
+    padding-block: 11px !important;
+  }
+
+  .settings-menu-card {
+    margin-top: 10px !important;
+  }
+
+  .settings-menu-row {
+    min-height: 58px !important;
+    grid-template-columns: 42px minmax(0, 1fr) 18px !important;
+    gap: 10px !important;
+    padding-inline: 14px !important;
+  }
+
+  .settings-menu-icon {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 13px !important;
+  }
+
+  .settings-menu-icon svg {
+    width: 19px !important;
+    height: 19px !important;
+  }
+
+  .settings-menu-label {
+    font-size: 14.5px !important;
+  }
+
+  .settings-menu-subtitle {
+    font-size: 11.5px !important;
   }
 }

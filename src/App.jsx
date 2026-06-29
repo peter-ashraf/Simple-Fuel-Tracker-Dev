@@ -38,9 +38,9 @@ import AppUpdatePrompt from "./components/AppUpdatePrompt";
 const Analytics = lazy(() => import("./components/AnalyticsPremium"));
 const SettingsScreen = lazy(() => import("./components/Settings"));
 const TripCostEstimator = lazy(() =>
-  import("./components/trips/TripCostEstimator"),
+  import("./components/trips/TripCostEstimatorPremium"),
 );
-const TyreCalculator = lazy(() => import("./components/TyreCalculator"));
+const TyreCalculator = lazy(() => import("./components/TyreCalculatorPremium"));
 const Maintenance = lazy(() => import("./components/Maintenance"));
 const MaintenanceForm = lazy(() => import("./components/MaintenanceForm"));
 const MaintenanceLogEdit = lazy(() =>
@@ -538,7 +538,10 @@ export default function App() {
   const isHistoryRoute = location.pathname === "/history";
   const isAnalyticsRoute = location.pathname === "/analytics";
   const isSettingsRoute = location.pathname === "/settings";
-  const showLegacyHeader = !isPrimaryRoute;
+  const isToolRoute =
+    location.pathname.startsWith("/trip-estimator") ||
+    location.pathname.startsWith("/tyre-calculator");
+  const showLegacyHeader = !isPrimaryRoute && !isToolRoute;
   const showBottomNav =
     location.pathname !== "/add" &&
     !location.pathname.startsWith("/trip-estimator") &&
@@ -558,7 +561,9 @@ export default function App() {
                 ? "analytics-app-shell"
                 : isSettingsRoute
                   ? "settings-app-shell"
-                  : "max-w-lg",
+                  : isToolRoute
+                    ? "tool-app-shell"
+                    : "max-w-lg",
       )}
     >
       {showLegacyHeader && <Header />}
@@ -586,15 +591,17 @@ export default function App() {
                 ? "history-route-main overflow-hidden p-0"
                 : isAnalyticsRoute
                   ? "analytics-route-main overflow-hidden p-0"
-                  : isSettingsRoute
-                    ? "settings-route-main overflow-hidden p-0"
+                : isSettingsRoute
+                  ? "settings-route-main overflow-hidden p-0"
+                  : isToolRoute
+                    ? "tool-route-main overflow-y-auto p-0"
                     : "overflow-y-auto px-4",
           !isDashboardRoute &&
             !isFillUpRoute &&
             !isHistoryRoute &&
             !isAnalyticsRoute &&
             !isSettingsRoute &&
-            !isSettingsRoute &&
+            !isToolRoute &&
             (showLegacyHeader
               ? "pt-[calc(5rem+env(safe-area-inset-top))]"
               : "pt-[calc(2.5rem+env(safe-area-inset-top))]"),
@@ -602,6 +609,7 @@ export default function App() {
             !isFillUpRoute &&
             !isHistoryRoute &&
             !isAnalyticsRoute &&
+            !isToolRoute &&
             (showBottomNav
               ? "pb-[calc(7rem+env(safe-area-inset-bottom))]"
               : "pb-[calc(2.5rem+env(safe-area-inset-bottom))]"),

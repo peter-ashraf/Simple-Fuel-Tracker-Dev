@@ -1,0 +1,1167 @@
+.tyre-tool-screen {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(168, 85, 247, 0.16), transparent 25rem),
+    radial-gradient(circle at 86% 22%, rgba(34, 211, 238, 0.09), transparent 22rem),
+    linear-gradient(180deg, #020307 0%, #09101a 46%, #020307 100%);
+  padding-bottom: calc(15.5rem + env(safe-area-inset-bottom));
+}
+
+.tyre-topbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 5.6rem;
+}
+
+.tyre-topbar h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.tyre-topbar p {
+  margin: 0.45rem 0 0;
+  color: #aab4c5;
+  font-size: 1rem;
+}
+
+.tyre-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(168, 85, 247, 0.32);
+  background: rgba(15, 23, 42, 0.82);
+  color: #f8fafc;
+}
+
+.tyre-icon-button svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.tyre-vehicle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.tyre-vehicle-chip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 6.2rem;
+  padding: 0.8rem 1rem;
+  border-radius: 1.15rem;
+}
+
+.tyre-chip-art.vehicle-art {
+  width: 9.4rem;
+  height: 4.8rem;
+}
+
+.tyre-vehicle-chip span,
+.tyre-vehicle-chip small {
+  display: block;
+  color: #38bdf8;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tyre-vehicle-chip small {
+  color: #94a3b8;
+  text-transform: none;
+  margin-top: 0.25rem;
+}
+
+.tyre-vehicle-chip strong {
+  display: block;
+  color: #fff;
+  font-size: 1.45rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tyre-tools-button {
+  min-width: 11rem;
+  align-self: stretch;
+}
+
+.tyre-active-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+  min-height: 10rem;
+  padding: 1.15rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.72), rgba(8, 13, 22, 0.84));
+}
+
+.tyre-hex-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 7.2rem;
+  height: 7.2rem;
+  color: #22d3ee;
+  background: rgba(14, 116, 144, 0.15);
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+  filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.24));
+}
+
+.tyre-hex-icon svg {
+  width: 3.8rem;
+  height: 3.8rem;
+}
+
+.tyre-active-card p {
+  margin: 0 0 0.35rem;
+  color: #aab4c5;
+  font-weight: 730;
+}
+
+.tyre-active-card h3 {
+  margin: 0 0 0.85rem;
+  color: #fff;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.tyre-active-card span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  color: #b6c4d5;
+  background: rgba(15, 23, 42, 0.74);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+}
+
+.tyre-active-card span strong {
+  color: #22d3ee;
+  font-size: 1.2rem;
+}
+
+.tyre-input-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.tyre-input-grid label {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.tyre-input-grid label > span {
+  color: #cbd5e1;
+  font-weight: 750;
+}
+
+.tyre-input-grid input {
+  height: 4.2rem !important;
+  border-radius: 0.95rem !important;
+  border-color: rgba(168, 85, 247, 0.26) !important;
+  background: rgba(3, 7, 13, 0.45) !important;
+  color: #f8fafc !important;
+  font-size: 1.1rem !important;
+  font-weight: 800 !important;
+}
+
+.tyre-common-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem);
+  gap: 1rem;
+  align-items: center;
+  min-height: 4.6rem;
+  padding: 0 1rem;
+  margin-top: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.tyre-common-row > span {
+  color: #f8fafc;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.tyre-size-select {
+  width: 100%;
+  min-height: 3.2rem;
+  justify-content: space-between;
+}
+
+.tyre-size-menu {
+  width: 100%;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.tyre-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tyre-summary-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  min-height: 7.2rem;
+  padding: 1rem;
+  border-radius: 1.05rem;
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  background: rgba(30, 64, 175, 0.12);
+}
+
+.tyre-summary-card.is-purple {
+  border-color: rgba(168, 85, 247, 0.32);
+  background: rgba(126, 34, 206, 0.13);
+}
+
+.tyre-summary-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.tyre-summary-card.is-purple .tyre-summary-icon {
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.14);
+}
+
+.tyre-summary-icon svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.tyre-summary-card p {
+  margin: 0 0 0.25rem;
+  color: #aab4c5;
+  font-size: 0.86rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.tyre-summary-card h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.55rem;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.tyre-summary-card em {
+  display: inline-flex;
+  margin-top: 0.55rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 0.55rem;
+  color: #bfdbfe;
+  background: rgba(96, 165, 250, 0.16);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.tyre-summary-card.is-purple em {
+  color: #e9d5ff;
+  background: rgba(168, 85, 247, 0.18);
+}
+
+.tyre-result-table {
+  overflow: hidden;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.tyre-result-line {
+  display: grid;
+  grid-template-columns: auto minmax(8rem, 1.15fr) minmax(6rem, 1fr) minmax(4.5rem, 0.7fr) minmax(6rem, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  min-height: 4.7rem;
+  padding: 0 1rem;
+  border: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(8, 13, 22, 0.52);
+  text-align: left;
+  color: inherit;
+}
+
+.tyre-result-line:last-child {
+  border-bottom: 0;
+}
+
+.tyre-result-line.is-button:hover {
+  background: rgba(88, 28, 135, 0.2);
+}
+
+.tyre-line-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 0.8rem;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.tyre-line-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.tyre-line-label {
+  color: #cbd5e1;
+  font-weight: 800;
+}
+
+.tyre-result-line strong {
+  font-weight: 900;
+  text-align: right;
+}
+
+.tyre-result-line .is-original {
+  color: #60a5fa;
+}
+
+.tyre-result-line .is-new {
+  color: #c084fc;
+}
+
+.tyre-result-line .is-delta {
+  color: #e2e8f0;
+}
+
+.tyre-result-line .is-positive,
+.tyre-impact-list .is-positive {
+  color: #7dd3fc;
+}
+
+.tyre-result-line .is-negative,
+.tyre-impact-list .is-negative {
+  color: #fb7185;
+}
+
+.tyre-result-line .is-neutral,
+.tyre-impact-list .is-neutral {
+  color: #cbd5e1;
+}
+
+.tyre-result-note {
+  border: 1px solid rgba(168, 85, 247, 0.26);
+  background: rgba(88, 28, 135, 0.14);
+  color: #c084fc;
+}
+
+.tyre-history-shell {
+  margin-bottom: 1rem;
+}
+
+.tyre-history-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.tyre-history-card {
+  display: grid;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 1.1rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(168, 85, 247, 0.24);
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.86), rgba(8, 13, 22, 0.92));
+  color: inherit;
+  text-align: left;
+}
+
+.tyre-history-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.tyre-history-top small {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+  padding: 0.24rem 0.55rem;
+  border-radius: 0.5rem;
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.18);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tyre-history-top div:nth-of-type(2) small {
+  color: #86efac;
+  background: rgba(22, 101, 52, 0.22);
+}
+
+.tyre-history-top strong {
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.tyre-history-top > span {
+  color: #aab4c5;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.tyre-history-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.85rem;
+  color: #fb7185;
+  border: 1px solid rgba(251, 113, 133, 0.25);
+  background: rgba(225, 29, 72, 0.12);
+}
+
+.tyre-history-delete svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.tyre-history-date {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin: 0;
+  color: #9aa7ba;
+}
+
+.tyre-history-date svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.tyre-impact-list {
+  display: grid;
+  gap: 0.6rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  padding-top: 0.9rem;
+}
+
+.tyre-impact-list > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 2.9rem;
+}
+
+.tyre-impact-list svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  color: #a78bfa;
+}
+
+.tyre-impact-list span {
+  color: #e2e8f0;
+  font-weight: 760;
+}
+
+.tyre-impact-list strong {
+  font-weight: 900;
+}
+
+.tyre-action-inner {
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.8fr);
+}
+
+.tyre-action-inner .tool-action-button:nth-child(3),
+.tyre-action-inner .tool-action-button:nth-child(4) {
+  margin-top: 0.1rem;
+}
+
+.tyre-primary-action,
+.tyre-save-action {
+  background: linear-gradient(135deg, #5eead4 0%, #a855f7 55%, #7c3aed 100%);
+  border-color: rgba(216, 180, 254, 0.7);
+  color: #fff;
+  box-shadow: 0 0 34px rgba(168, 85, 247, 0.34);
+}
+
+@media (max-width: 760px) {
+  .tyre-vehicle-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tyre-tools-button {
+    min-height: 4rem;
+  }
+
+  .tyre-input-grid,
+  .tyre-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tyre-common-row {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .tyre-result-line {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    padding: 0.85rem;
+  }
+
+  .tyre-result-line .is-original,
+  .tyre-result-line .is-delta,
+  .tyre-result-line .is-new {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+
+  .tyre-line-icon {
+    grid-row: 1 / span 4;
+  }
+}
+
+@media (max-width: 540px) {
+  .tyre-chip-art.vehicle-art {
+    width: 6.8rem;
+    height: 4rem;
+  }
+
+  .tyre-vehicle-chip {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .tyre-active-card {
+    grid-template-columns: 1fr;
+  }
+
+  .tyre-hex-icon {
+    width: 5.6rem;
+    height: 5.6rem;
+  }
+
+  .tyre-history-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .tyre-history-top > span {
+    display: none;
+  }
+
+  .tyre-history-top div:nth-of-type(2) {
+    grid-column: 1;
+  }
+
+  .tyre-history-delete {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+  }
+
+  .tyre-action-inner {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tyre-action-inner .tool-action-button {
+    font-size: 0.95rem;
+  }
+}
+
+
+/* =========================================================
+   Quick-action Tire Comparison overrides
+   ========================================================= */
+.tyre-tool-screen {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(32, 230, 183, 0.13), transparent 24rem),
+    radial-gradient(circle at 86% 22%, rgba(35, 183, 255, 0.1), transparent 22rem),
+    linear-gradient(180deg, #02070d 0%, #07111c 46%, #02070d 100%) !important;
+  padding-bottom: calc(8.8rem + env(safe-area-inset-bottom)) !important;
+}
+.tyre-topbar {
+  min-height: 3.6rem !important;
+  gap: 0.7rem !important;
+}
+.tyre-topbar h1 {
+  font-size: clamp(1.55rem, 6vw, 1.9rem) !important;
+  letter-spacing: -0.035em !important;
+}
+.tyre-topbar p {
+  margin-top: 0.2rem !important;
+  font-size: 0.76rem !important;
+}
+.tyre-icon-button {
+  width: 2.8rem !important;
+  height: 2.8rem !important;
+  border-radius: 0.9rem !important;
+  border-color: rgba(120, 210, 220, 0.24) !important;
+}
+.tyre-icon-button svg {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+.tyre-vehicle-row {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 0.55rem !important;
+  margin-top: 0.65rem !important;
+}
+.tyre-vehicle-chip {
+  min-height: 3.65rem !important;
+  padding: 0.45rem 0.55rem !important;
+  gap: 0.55rem !important;
+  border-radius: 0.95rem !important;
+}
+.tyre-chip-art.vehicle-art {
+  width: 4.9rem !important;
+  height: 2.8rem !important;
+  min-height: 0 !important;
+}
+.tyre-vehicle-chip span {
+  font-size: 0.62rem !important;
+}
+.tyre-vehicle-chip strong {
+  font-size: 0.95rem !important;
+}
+.tyre-vehicle-chip small {
+  display: none !important;
+}
+.tyre-tools-button {
+  min-width: 6.2rem !important;
+  height: 3.65rem !important;
+  align-self: auto !important;
+}
+.tyre-overview-card,
+.tyre-input-card,
+.tyre-result-card,
+.tyre-history-shell {
+  padding: 0.78rem !important;
+}
+.tyre-active-card {
+  grid-template-columns: auto minmax(0,1fr) !important;
+  min-height: 4.8rem !important;
+  padding: 0.65rem !important;
+  gap: 0.65rem !important;
+  border-radius: 0.9rem !important;
+}
+.tyre-hex-icon {
+  width: 3.2rem !important;
+  height: 3.2rem !important;
+}
+.tyre-hex-icon svg {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+}
+.tyre-active-card p {
+  font-size: .72rem !important;
+  margin-bottom: .1rem !important;
+}
+.tyre-active-card h3 {
+  font-size: 1rem !important;
+  margin-bottom: .35rem !important;
+}
+.tyre-active-card span {
+  padding: .45rem .6rem !important;
+  border-radius: .75rem !important;
+  font-size: .72rem !important;
+}
+.tyre-active-card span strong {
+  font-size: .86rem !important;
+}
+.tyre-input-grid {
+  gap: 0.55rem !important;
+}
+.tyre-input-grid label {
+  gap: 0.35rem !important;
+}
+.tyre-input-grid label > span {
+  font-size: 0.68rem !important;
+}
+.tyre-input-grid input {
+  height: 2.9rem !important;
+  min-height: 2.9rem !important;
+  border-radius: 0.78rem !important;
+  font-size: 0.95rem !important;
+  padding-inline: .55rem !important;
+}
+.tyre-common-row {
+  grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 11rem) !important;
+  gap: 0.55rem !important;
+  min-height: 3.2rem !important;
+  padding: 0 0.65rem !important;
+  margin-top: 0.55rem !important;
+  border-radius: 0.85rem !important;
+}
+.tyre-common-row > span {
+  font-size: .78rem !important;
+}
+.tyre-size-select {
+  min-height: 2.45rem !important;
+}
+.tyre-size-menu {
+  max-height: 12rem !important;
+}
+.tyre-result-card .tool-section-heading {
+  margin-bottom: .55rem !important;
+}
+.tyre-result-details:not(.is-modal) .tyre-summary-grid {
+  display: none !important;
+}
+.tyre-result-table {
+  display: grid !important;
+  gap: .35rem !important;
+}
+.tyre-result-line {
+  grid-template-columns: 1.45rem minmax(0, 1fr) auto auto !important;
+  min-height: 2.35rem !important;
+  padding: 0.35rem 0.45rem !important;
+  border-radius: 0.75rem !important;
+  background: rgba(5, 12, 22, .56) !important;
+}
+.tyre-result-line .is-original {
+  display: none !important;
+}
+.tyre-line-icon {
+  width: 1.35rem !important;
+  height: 1.35rem !important;
+}
+.tyre-line-label {
+  font-size: 0.72rem !important;
+}
+.tyre-result-line strong {
+  font-size: 0.75rem !important;
+}
+.tyre-result-note {
+  margin-top: .55rem !important;
+  padding: .55rem !important;
+}
+.tyre-history-shell {
+  margin-top: 0.75rem !important;
+}
+.tyre-history-list {
+  gap: .55rem !important;
+}
+.tyre-history-card {
+  padding: .7rem !important;
+  border-radius: .95rem !important;
+}
+.tyre-history-top {
+  gap: .55rem !important;
+}
+.tyre-impact-list {
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  gap: .35rem !important;
+}
+.tyre-impact-list div {
+  min-height: 3.1rem !important;
+  padding: .4rem !important;
+}
+.tyre-action-inner {
+  display: grid !important;
+  grid-template-columns: 1fr .36fr 1fr 1fr !important;
+}
+.tyre-action-inner .tool-action-button {
+  min-width: 0 !important;
+}
+@media (max-width: 390px) {
+  .tyre-vehicle-row {
+    grid-template-columns: 1fr auto !important;
+  }
+  .tyre-tools-button span {
+    display: none !important;
+  }
+  .tyre-tools-button {
+    min-width: 3.3rem !important;
+    width: 3.3rem !important;
+  }
+}
+
+/* =========================================================
+   Tire Comparison final compact quick-action layout
+   ========================================================= */
+.tyre-tool-screen {
+  padding-bottom: calc(5.8rem + env(safe-area-inset-bottom)) !important;
+}
+
+.tyre-topbar {
+  min-height: 3.2rem !important;
+  gap: 0.55rem !important;
+}
+
+.tyre-topbar h1 {
+  font-size: 1.28rem !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.tyre-topbar p {
+  margin-top: 0.1rem !important;
+  font-size: 0.72rem !important;
+  line-height: 1.15 !important;
+}
+
+.tyre-icon-button {
+  width: 2.75rem !important;
+  height: 2.75rem !important;
+  border-radius: 0.82rem !important;
+}
+
+.tyre-icon-button svg {
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+}
+
+.tyre-vehicle-row {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 0.55rem !important;
+  margin-top: 0.55rem !important;
+}
+
+.tyre-vehicle-chip {
+  min-height: 3.3rem !important;
+  grid-template-columns: 3.8rem minmax(0, 1fr) auto !important;
+  gap: 0.55rem !important;
+  padding: 0.45rem 0.55rem !important;
+  border-radius: 0.95rem !important;
+}
+
+.tyre-chip-art.vehicle-art {
+  width: 3.8rem !important;
+  height: 2.3rem !important;
+  min-height: 0 !important;
+}
+
+.tyre-vehicle-chip span {
+  font-size: 0.58rem !important;
+  line-height: 1 !important;
+}
+
+.tyre-vehicle-chip small {
+  display: none !important;
+}
+
+.tyre-vehicle-chip strong {
+  font-size: 0.88rem !important;
+  font-weight: 820 !important;
+}
+
+.tyre-tools-wrap {
+  width: auto !important;
+}
+
+.tyre-tools-button {
+  min-width: 5.5rem !important;
+  min-height: 3.3rem !important;
+  padding: 0 0.62rem !important;
+}
+
+.tyre-overview-card .tool-section-heading {
+  margin-bottom: 0.48rem !important;
+}
+
+.tyre-active-card {
+  grid-template-columns: 2.6rem minmax(0, 1fr) !important;
+  min-height: 4.35rem !important;
+  gap: 0.65rem !important;
+  padding: 0.65rem !important;
+  border-radius: 0.95rem !important;
+}
+
+.tyre-hex-icon {
+  width: 2.6rem !important;
+  height: 2.6rem !important;
+}
+
+.tyre-hex-icon svg {
+  width: 1.45rem !important;
+  height: 1.45rem !important;
+}
+
+.tyre-active-card p {
+  margin-bottom: 0.08rem !important;
+  font-size: 0.72rem !important;
+}
+
+.tyre-active-card h3 {
+  margin-bottom: 0.35rem !important;
+  font-size: 0.95rem !important;
+  font-weight: 830 !important;
+}
+
+.tyre-active-card span {
+  gap: 0.28rem !important;
+  padding: 0.35rem 0.5rem !important;
+  border-radius: 0.68rem !important;
+  font-size: 0.72rem !important;
+}
+
+.tyre-active-card span strong {
+  font-size: 0.78rem !important;
+}
+
+.tyre-input-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 0.5rem !important;
+}
+
+.tyre-input-grid label {
+  gap: 0.25rem !important;
+}
+
+.tyre-input-grid label > span {
+  font-size: 0.68rem !important;
+  font-weight: 760 !important;
+}
+
+.tyre-input-grid input {
+  height: 2.55rem !important;
+  min-height: 2.55rem !important;
+  border-radius: 0.75rem !important;
+  padding: 0 0.55rem !important;
+  font-size: 0.9rem !important;
+  font-weight: 760 !important;
+}
+
+.tyre-common-row {
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1fr) !important;
+  min-height: 3rem !important;
+  gap: 0.5rem !important;
+  padding: 0.38rem 0.55rem !important;
+  margin-top: 0.55rem !important;
+  border-radius: 0.82rem !important;
+}
+
+.tyre-common-row > span {
+  font-size: 0.78rem !important;
+}
+
+.tyre-size-select {
+  min-height: 2.35rem !important;
+  padding: 0 0.55rem !important;
+}
+
+.tyre-size-menu {
+  width: min(13rem, calc(100vw - 2.5rem)) !important;
+  max-height: min(15rem, 42vh) !important;
+  right: 0 !important;
+  overflow-y: auto !important;
+}
+
+.tyre-history-shell {
+  margin-bottom: 0.3rem !important;
+}
+
+.tyre-result-details {
+  display: grid !important;
+  gap: 0.65rem !important;
+}
+
+.tyre-summary-grid {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0.5rem !important;
+  margin-bottom: 0.55rem !important;
+}
+
+.tyre-summary-card {
+  min-height: 4.25rem !important;
+  grid-template-columns: 2.1rem minmax(0, 1fr) !important;
+  gap: 0.55rem !important;
+  padding: 0.6rem !important;
+  border-radius: 0.85rem !important;
+}
+
+.tyre-summary-icon {
+  width: 2.1rem !important;
+  height: 2.1rem !important;
+  border-radius: 0.65rem !important;
+}
+
+.tyre-summary-icon svg {
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+}
+
+.tyre-summary-card p {
+  font-size: 0.58rem !important;
+  margin-bottom: 0.1rem !important;
+}
+
+.tyre-summary-card h3 {
+  font-size: 0.9rem !important;
+}
+
+.tyre-summary-card em {
+  margin-top: 0.25rem !important;
+  padding: 0.16rem 0.38rem !important;
+  font-size: 0.58rem !important;
+}
+
+.tyre-result-table {
+  border-radius: 0.82rem !important;
+}
+
+.tyre-result-line {
+  grid-template-columns: 1.9rem minmax(5.6rem, 1fr) minmax(3.8rem, .75fr) minmax(3.2rem, .58fr) minmax(3.8rem, .75fr) !important;
+  min-height: 2.65rem !important;
+  gap: 0.45rem !important;
+  padding: 0 0.55rem !important;
+}
+
+.tyre-line-icon {
+  width: 1.9rem !important;
+  height: 1.9rem !important;
+  border-radius: 0.55rem !important;
+}
+
+.tyre-line-icon svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+.tyre-line-label,
+.tyre-result-line strong {
+  font-size: 0.68rem !important;
+}
+
+.tyre-result-note {
+  margin-top: 0.55rem !important;
+  padding: 0.65rem !important;
+  border-radius: 0.8rem !important;
+}
+
+.tyre-history-list {
+  gap: 0.55rem !important;
+}
+
+.tyre-history-card {
+  padding: 0.7rem !important;
+  gap: 0.55rem !important;
+  border-radius: 0.88rem !important;
+}
+
+.tyre-history-top strong {
+  font-size: 0.88rem !important;
+}
+
+.tyre-impact-list {
+  gap: 0.3rem !important;
+  padding-top: 0.55rem !important;
+}
+
+.tyre-impact-list > div {
+  min-height: 2.1rem !important;
+  font-size: 0.72rem !important;
+}
+
+.tyre-action-bar {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)) !important;
+}
+
+.tyre-action-inner {
+  grid-template-columns: minmax(0, 1.25fr) 2.75rem minmax(0, 0.78fr) minmax(0, 0.85fr) !important;
+  gap: 0.42rem !important;
+}
+
+.tyre-action-inner .tool-action-button:nth-child(2) span {
+  display: none !important;
+}
+
+.tyre-action-inner .tool-action-button {
+  min-height: 3.15rem !important;
+  padding-inline: 0.42rem !important;
+  font-size: 0.74rem !important;
+}
+
+.tyre-action-inner .tool-action-button:nth-child(2) {
+  padding-inline: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .tyre-vehicle-row {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .tyre-tools-button {
+    min-height: 3.3rem !important;
+  }
+
+  .tyre-input-grid,
+  .tyre-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .tyre-summary-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .tyre-common-row {
+    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1fr) !important;
+    padding: 0.38rem 0.55rem !important;
+  }
+
+  .tyre-result-line {
+    grid-template-columns: 1.9rem minmax(5.6rem, 1fr) minmax(3.8rem, .75fr) minmax(3.2rem, .58fr) minmax(3.8rem, .75fr) !important;
+    padding: 0 0.55rem !important;
+  }
+
+  .tyre-result-line .is-original,
+  .tyre-result-line .is-delta,
+  .tyre-result-line .is-new {
+    grid-column: auto !important;
+    text-align: right !important;
+  }
+
+  .tyre-line-icon {
+    grid-row: auto !important;
+  }
+
+  .tyre-action-inner {
+    grid-template-columns: minmax(0, 1.25fr) 2.75rem minmax(0, 0.78fr) minmax(0, 0.85fr) !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .tyre-topbar p,
+  .tyre-vehicle-chip span,
+  .tyre-common-row > span {
+    display: none !important;
+  }
+
+  .tyre-vehicle-chip {
+    grid-template-columns: 3.2rem minmax(0, 1fr) auto !important;
+  }
+
+  .tyre-chip-art.vehicle-art {
+    width: 3.2rem !important;
+  }
+}

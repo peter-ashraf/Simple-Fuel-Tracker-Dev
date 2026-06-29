@@ -12131,3 +12131,236 @@ label {
     font-size: 9.5px !important;
   }
 }
+
+/* Empty Analytics state should sit close to the header, not float mid-screen. */
+.analytics-premium-content:has(.analytics-empty-card) {
+  justify-content: flex-start !important;
+  gap: 16px !important;
+  padding-top: calc(24px + env(safe-area-inset-top)) !important;
+}
+
+.analytics-premium-content:has(.analytics-empty-card) .analytics-topbar {
+  flex: 0 0 auto !important;
+}
+
+.analytics-empty-card {
+  min-height: min(360px, calc(100dvh - 260px)) !important;
+  margin-top: 0 !important;
+  padding: 34px 24px !important;
+}
+
+
+/* =========================================================
+   Dashboard header tools access fix
+   - Replaces the notification-only action with a real Tools dropdown.
+   ========================================================= */
+.dashboard-tools-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard-tools-trigger.icon-button {
+  position: relative;
+  min-width: 46px !important;
+  width: 46px !important;
+  min-height: 46px !important;
+  height: 46px !important;
+  border-radius: 18px !important;
+  background: rgba(8, 19, 31, .82) !important;
+  border: 1px solid rgba(148, 200, 220, .18) !important;
+  color: #f5faff !important;
+}
+
+.dashboard-tools-trigger.icon-button svg {
+  width: 21px !important;
+  height: 21px !important;
+}
+
+.dashboard-tools-trigger.icon-button:hover,
+.dashboard-tools-trigger.icon-button[aria-expanded="true"] {
+  border-color: rgba(32, 230, 183, .46) !important;
+  color: var(--accent-primary) !important;
+  box-shadow: 0 0 22px rgba(32, 230, 183, .16), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.dashboard-tools-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 90;
+  width: min(250px, calc(100vw - 34px));
+  padding: 8px;
+  border: 1px solid rgba(120, 210, 220, .22);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(32, 230, 183, .12), transparent 120px),
+    rgba(7, 17, 28, .94);
+  box-shadow:
+    0 22px 54px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255, 255, 255, .07);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+[dir="rtl"] .dashboard-tools-menu {
+  left: 0;
+  right: auto;
+}
+
+.dashboard-tools-menu-item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 6px 10px;
+  border-radius: 15px;
+  color: #c7d4e2;
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.dashboard-tools-menu-item > svg:first-child {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border: 1px solid rgba(32, 230, 183, .22);
+  border-radius: 13px;
+  color: var(--accent-primary);
+  background: rgba(32, 230, 183, .1);
+}
+
+.dashboard-tools-menu-item span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dashboard-tools-menu-item:hover,
+.dashboard-tools-menu-item:focus-visible {
+  background: rgba(32, 230, 183, .12);
+  color: #f5faff;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.dashboard-tools-menu-chevron {
+  transform: rotate(-90deg);
+  color: #7f91a5;
+}
+
+@media (max-width: 374px) {
+  .dashboard-tools-menu {
+    right: -4px;
+    width: min(230px, calc(100vw - 28px));
+  }
+}
+
+
+/* =========================================================
+   Dashboard Tools menu animation/style polish
+   ========================================================= */
+.dashboard-tools-control {
+  z-index: 120;
+}
+.dashboard-tools-trigger.icon-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 46px !important;
+  width: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  border-radius: 18px !important;
+  background: rgba(8, 19, 31, 0.82) !important;
+  border: 1px solid rgba(120, 210, 220, 0.22) !important;
+  color: #f5faff !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+.dashboard-tools-menu {
+  z-index: 180 !important;
+  padding: 7px !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(120, 210, 220, .24) !important;
+  background:
+    radial-gradient(circle at 82% 0%, rgba(32, 230, 183, .14), transparent 8rem),
+    rgba(5, 13, 22, .97) !important;
+  box-shadow: 0 20px 55px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.06) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+.dashboard-tools-menu-item {
+  min-height: 42px !important;
+  border-radius: 13px !important;
+  font-size: 12px !important;
+  font-weight: 760 !important;
+}
+.dashboard-tools-menu-item:hover,
+.dashboard-tools-menu-item:focus-visible {
+  background: rgba(32, 230, 183, .13) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* =========================================================
+   Dashboard Tools dropdown — match premium tool dropdown animation style
+   ========================================================= */
+.dashboard-tools-control {
+  z-index: 260 !important;
+}
+
+.dashboard-tools-trigger.icon-button[aria-expanded="true"] {
+  border-color: rgba(32, 230, 183, .52) !important;
+  color: #5fffe6 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 22px rgba(32,230,183,.18) !important;
+}
+
+.dashboard-tools-menu {
+  z-index: 300 !important;
+  width: min(220px, calc(100vw - 1.8rem)) !important;
+  padding: 0.45rem !important;
+  border-radius: 15px !important;
+  border: 1px solid rgba(93, 222, 210, .25) !important;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(32, 230, 183, .14), transparent 8rem),
+    rgba(5, 14, 22, .985) !important;
+  box-shadow: 0 22px 58px rgba(0, 0, 0, .58), inset 0 1px 0 rgba(255,255,255,.07) !important;
+  backdrop-filter: blur(22px) !important;
+  -webkit-backdrop-filter: blur(22px) !important;
+}
+
+.dashboard-tools-menu-item {
+  min-height: 2.55rem !important;
+  grid-template-columns: 2rem minmax(0, 1fr) 1rem !important;
+  gap: 0.55rem !important;
+  padding: 0 0.55rem !important;
+  border-radius: 0.75rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 760 !important;
+}
+
+.dashboard-tools-menu-item > svg:first-child {
+  width: 2rem !important;
+  height: 2rem !important;
+  padding: 0.48rem !important;
+  border-radius: 0.7rem !important;
+  color: #48f4dc !important;
+  background: rgba(32,230,183,.1) !important;
+  border: 1px solid rgba(32,230,183,.2) !important;
+}
+
+.dashboard-tools-menu-item:hover,
+.dashboard-tools-menu-item:focus-visible {
+  background: rgba(32,230,183,.14) !important;
+  color: #f8fafc !important;
+}
