@@ -43,15 +43,15 @@
   --success: #00a884;
   --shadow-glow: 0 0 30px rgba(0, 168, 132, 0.22);
   --shadow-card: 0 18px 45px rgba(15, 23, 42, 0.13);
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-md: 14px;
-  --text-lg: 16px;
-  --text-xl: 20px;
-  --text-2xl: 26px;
-  --text-3xl: 34px;
-  --text-hero: 42px;
   --app-text-scale: 1;
+  --text-xs: calc(11px * var(--app-text-scale));
+  --text-sm: calc(12px * var(--app-text-scale));
+  --text-md: calc(14px * var(--app-text-scale));
+  --text-lg: calc(16px * var(--app-text-scale));
+  --text-xl: calc(20px * var(--app-text-scale));
+  --text-2xl: calc(26px * var(--app-text-scale));
+  --text-3xl: calc(34px * var(--app-text-scale));
+  --text-hero: calc(42px * var(--app-text-scale));
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -12366,3 +12366,278 @@ label {
   background: rgba(32,230,183,.14) !important;
   color: #f8fafc !important;
 }
+
+/* =========================================================
+   Theme sync repair
+   - These rules intentionally sit last because several premium
+     redesign patches above use hardcoded dark colors + !important.
+   - The root .light/.dark class from useTheme is the source of truth.
+   ========================================================= */
+.light body {
+  background:
+    radial-gradient(circle at 15% -10%, rgba(14, 165, 233, 0.12), transparent 32rem),
+    radial-gradient(circle at 85% 15%, rgba(20, 184, 166, 0.10), transparent 28rem),
+    var(--bg-main) !important;
+}
+
+.light .app-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent 32%),
+    var(--bg-main) !important;
+  color: var(--text-primary) !important;
+}
+
+.light .app-shell::before,
+.light .dashboard-premium-screen::before,
+.light .history-premium-screen::before,
+.light .analytics-premium-screen::before {
+  opacity: 0.38 !important;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.028) 1px, transparent 1px) !important;
+}
+
+.light .dashboard-premium-screen,
+.light .history-premium-screen,
+.light .analytics-premium-screen,
+.light .app-shell.fillup-app-shell {
+  color: var(--text-primary) !important;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(20, 184, 166, 0.15), transparent 18rem),
+    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.10), transparent 18rem),
+    linear-gradient(180deg, #f8fafc 0%, #ecfeff 48%, #f8fafc 100%) !important;
+}
+
+.light .dashboard-greeting-name,
+.light .dashboard-hero-title-row h2,
+.light .dashboard-stat-value,
+.light .dashboard-range-pill strong,
+.light .dashboard-due-section .section-heading h2,
+.light .dashboard-insights-header h2,
+.light .dashboard-due-grid .maintenance-alert-title {
+  color: #08111f !important;
+}
+
+.light .dashboard-greeting-eyebrow,
+.light .dashboard-vehicle-type,
+.light .dashboard-tyre-profile,
+.light .dashboard-stat-label,
+.light .dashboard-stat-value small,
+.light .dashboard-range-pill span,
+.light .dashboard-due-grid .maintenance-alert-subtitle,
+.light .dashboard-insights-header p,
+.light .dashboard-insights-header > span,
+.light .dashboard-insights-copy span,
+.light .dashboard-insights-copy small {
+  color: #64748b !important;
+}
+
+.light .dashboard-user-avatar,
+.light .dashboard-vehicle-chip .vehicle-chip,
+.light .dashboard-tools-trigger.icon-button,
+.light .dashboard-bell-button.icon-button,
+.light .fillup-back-button {
+  background: rgba(255, 255, 255, 0.82) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a !important;
+  box-shadow: 0 0.7rem 1.4rem rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,.72) !important;
+}
+
+.light .dashboard-tools-trigger.icon-button:hover,
+.light .dashboard-tools-trigger.icon-button[aria-expanded="true"] {
+  color: var(--accent-primary) !important;
+  border-color: rgba(20, 184, 166, 0.34) !important;
+}
+
+.light .dashboard-tools-menu {
+  background:
+    radial-gradient(circle at 85% 0%, rgba(20, 184, 166, .12), transparent 8rem),
+    rgba(255, 255, 255, .96) !important;
+  border-color: rgba(15, 23, 42, .10) !important;
+  box-shadow: 0 1.4rem 3.5rem rgba(15, 23, 42, .14), inset 0 1px 0 rgba(255,255,255,.78) !important;
+}
+
+.light .dashboard-tools-menu-item {
+  color: #334155 !important;
+}
+
+.light .dashboard-tools-menu-item:hover,
+.light .dashboard-tools-menu-item:focus-visible {
+  background: rgba(20, 184, 166, .12) !important;
+  color: #0f172a !important;
+}
+
+.light .dashboard-vehicle-hero.premium-card {
+  background:
+    radial-gradient(circle at 78% 66%, rgba(20, 184, 166, 0.16), transparent 32%),
+    radial-gradient(circle at 62% 40%, rgba(14, 165, 233, 0.13), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(226, 251, 248, 0.90)) !important;
+  border-color: rgba(20, 184, 166, 0.24) !important;
+  box-shadow: 0 1.4rem 3.2rem rgba(15, 23, 42, .12), inset 0 1px 0 rgba(255,255,255,.82) !important;
+}
+
+.light .dashboard-vehicle-hero.premium-card::before {
+  background:
+    linear-gradient(90deg, rgba(248, 250, 252, 0.98) 0%, rgba(248, 250, 252, 0.76) 36%, rgba(248, 250, 252, 0.06) 72%),
+    linear-gradient(180deg, rgba(255,255,255,0.42), transparent 36%) !important;
+}
+
+.light .dashboard-vehicle-hero.premium-card::after {
+  background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 45%) !important;
+}
+
+.light .vehicle-photo-vignette {
+  background:
+    radial-gradient(circle at 72% 70%, rgba(20, 184, 166, 0.12), transparent 30%),
+    linear-gradient(90deg, rgba(248,250,252,0.78) 0%, rgba(248,250,252,0.35) 38%, rgba(248,250,252,0.02) 72%),
+    linear-gradient(180deg, rgba(248,250,252,0.10), rgba(248,250,252,0.30)) !important;
+}
+
+.light .dashboard-stats-group.premium-card,
+.light .dashboard-insights-card.premium-card,
+.light .dashboard-due-grid .maintenance-alert-card,
+.light .premium-card,
+.light .glass-card,
+.light .metric-card,
+.light .metric-card-secondary {
+  background:
+    radial-gradient(circle at 82% 6%, rgba(20, 184, 166, 0.10), transparent 14rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(236, 254, 255, 0.68)),
+    var(--bg-card) !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 1.1rem 2.6rem rgba(15, 23, 42, .10), inset 0 1px 0 rgba(255,255,255,.84) !important;
+}
+
+.light .dashboard-stat-segment + .dashboard-stat-segment {
+  border-left-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+.light .dashboard-insights-header > span,
+.light .dashboard-range-pill {
+  background: rgba(255, 255, 255, .72) !important;
+  border-color: rgba(15, 23, 42, .10) !important;
+}
+
+.light .bottom-nav {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(236, 254, 255, .88)) !important;
+  border-color: rgba(15, 23, 42, .12) !important;
+  box-shadow:
+    0 1rem 2.4rem rgba(15, 23, 42, .16),
+    0 0 1.6rem rgba(20, 184, 166, .12),
+    inset 0 1px 0 rgba(255,255,255,.88) !important;
+}
+
+.light .nav-item {
+  color: #64748b !important;
+}
+
+.light .nav-item.active {
+  color: var(--accent-primary) !important;
+}
+
+.light .nav-add {
+  color: #ffffff !important;
+}
+
+.light .fillup-reference-header::before {
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, .96) 0%, rgba(236, 254, 255, .74) 68%, transparent 100%) !important;
+}
+
+.light .fillup-field-card,
+.light .fillup-unit-price,
+.light .fillup-gauge-card {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(20, 184, 166, .10), transparent 42%),
+    rgba(255, 255, 255, .76) !important;
+  border-color: rgba(15, 23, 42, .10) !important;
+}
+
+.light .fillup-reference-screen .input-field,
+.light .fillup-reference-screen textarea.input-field,
+.light .fillup-header-copy h1,
+.light .fillup-gauge-heading strong {
+  color: #0f172a !important;
+}
+
+.light .fillup-header-copy p,
+.light .fillup-field-label,
+.light .fillup-block-label,
+.light .fillup-gauge-heading small,
+.light .fillup-gauge-value span {
+  color: #64748b !important;
+}
+
+.light .fillup-gauge-range::-webkit-slider-thumb {
+  background: #f8fafc !important;
+}
+
+.light .fillup-gauge-range::-moz-range-thumb {
+  background: #f8fafc !important;
+}
+
+/* Text size setting repair: scale the app tokens and the late premium px rules. */
+html[data-text-size="compact"] {
+  --app-text-scale: 0.92;
+}
+
+html[data-text-size="default"] {
+  --app-text-scale: 1;
+}
+
+html[data-text-size="large"] {
+  --app-text-scale: 1.12;
+}
+
+html[data-text-size] .app-shell {
+  font-size: calc(16px * var(--app-text-scale)) !important;
+}
+
+html[data-text-size] .dashboard-greeting-eyebrow { font-size: calc(15px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-greeting-name { font-size: clamp(calc(30px * var(--app-text-scale)), 7.4vw, calc(34px * var(--app-text-scale))) !important; }
+html[data-text-size] .dashboard-vehicle-chip .vehicle-chip { font-size: calc(15px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-hero-title-row h2 { font-size: clamp(calc(28px * var(--app-text-scale)), 7vw, calc(34px * var(--app-text-scale))) !important; }
+html[data-text-size] .dashboard-active-badge { font-size: calc(15px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-vehicle-type,
+html[data-text-size] .dashboard-tyre-profile { font-size: calc(13px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-range-pill strong { font-size: calc(20px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-range-pill span { font-size: calc(10px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-stat-label { font-size: calc(10.5px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-stat-value { font-size: clamp(calc(18px * var(--app-text-scale)), 4.7vw, calc(21px * var(--app-text-scale))) !important; }
+html[data-text-size] .dashboard-stat-value small { font-size: calc(10px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-due-section .section-heading h2 { font-size: calc(20px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-view-all-link { font-size: calc(11px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-due-grid .maintenance-alert-title { font-size: calc(14px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-due-grid .maintenance-alert-subtitle { font-size: calc(10.5px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-insights-header h2 { font-size: calc(21px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-insights-header p { font-size: calc(12px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-insights-header > span { font-size: calc(10px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-insights-copy strong { font-size: clamp(calc(34px * var(--app-text-scale)), 8.2vw, calc(40px * var(--app-text-scale))) !important; }
+html[data-text-size] .dashboard-insights-copy span { font-size: calc(13px * var(--app-text-scale)) !important; }
+html[data-text-size] .dashboard-insights-copy small { font-size: calc(10px * var(--app-text-scale)) !important; }
+
+html[data-text-size] .fillup-header-copy h1 { font-size: clamp(calc(22px * var(--app-text-scale)), 5.6vw, calc(26px * var(--app-text-scale))) !important; }
+html[data-text-size] .fillup-header-copy p { font-size: calc(13px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-field-label { font-size: calc(8px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-reference-screen .input-field,
+html[data-text-size] .fillup-reference-screen textarea.input-field { font-size: calc(13.5px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-date-input { font-size: calc(14.5px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-unit-price span { font-size: calc(8px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-unit-price strong { font-size: calc(10px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-block-label { font-size: calc(10px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-reference-screen .segmented-option { font-size: calc(14px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-gauge-heading strong { font-size: calc(11px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-gauge-heading small,
+html[data-text-size] .fillup-gauge-heading em { font-size: calc(9px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-gauge-value strong { font-size: calc(23px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-gauge-value span { font-size: calc(9px * var(--app-text-scale)) !important; }
+html[data-text-size] .fillup-save-button { font-size: calc(15px * var(--app-text-scale)) !important; }
+
+html[data-text-size] .settings-page-header h1 { font-size: clamp(calc(29px * var(--app-text-scale)), 7.6vw, calc(38px * var(--app-text-scale))) !important; }
+html[data-text-size] .settings-profile-copy h2 { font-size: calc(24px * var(--app-text-scale)) !important; }
+html[data-text-size] .settings-profile-copy p { font-size: calc(14px * var(--app-text-scale)) !important; }
+html[data-text-size] .settings-profile-meta { font-size: calc(13px * var(--app-text-scale)) !important; }
+html[data-text-size] .settings-menu-copy strong { font-size: calc(15.5px * var(--app-text-scale)) !important; }
+html[data-text-size] .settings-menu-copy span { font-size: calc(12.3px * var(--app-text-scale)) !important; }

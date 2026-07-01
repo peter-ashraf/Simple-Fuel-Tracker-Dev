@@ -47,6 +47,8 @@ const applyResolvedTheme = (resolvedTheme, selectedTheme) => {
   const root = document.documentElement;
   const isDark = resolvedTheme === 'dark';
   const activeColor = isDark ? DARK_STATUS_BAR_COLOR : LIGHT_STATUS_BAR_COLOR;
+  const lightMediaColor = selectedTheme === 'system' ? LIGHT_STATUS_BAR_COLOR : activeColor;
+  const darkMediaColor = selectedTheme === 'system' ? DARK_STATUS_BAR_COLOR : activeColor;
 
   root.classList.remove('light', 'dark');
   root.classList.add(resolvedTheme);
@@ -62,13 +64,13 @@ const applyResolvedTheme = (resolvedTheme, selectedTheme) => {
     name: 'theme-color',
     id: 'theme-color-meta-light',
     media: '(prefers-color-scheme: light)',
-    content: LIGHT_STATUS_BAR_COLOR,
+    content: lightMediaColor,
   });
   ensureMetaTag('meta[name="theme-color"][media="(prefers-color-scheme: dark)"]', {
     name: 'theme-color',
     id: 'theme-color-meta-dark',
     media: '(prefers-color-scheme: dark)',
-    content: DARK_STATUS_BAR_COLOR,
+    content: darkMediaColor,
   });
   ensureMetaTag('meta[name="apple-mobile-web-app-status-bar-style"]', {
     name: 'apple-mobile-web-app-status-bar-style',
