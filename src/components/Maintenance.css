@@ -1051,22 +1051,23 @@
   }
 }
 
-@media (prefers-color-scheme: light) {
-  .maintenance-premium-screen {
-    color: #0f172a;
-    background: linear-gradient(180deg, #ecfeff, #f8fafc);
-  }
+.light .maintenance-premium-screen {
+  color: #0f172a;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(20, 184, 166, 0.16), transparent 24rem),
+    radial-gradient(circle at 8% 42%, rgba(14, 165, 233, 0.12), transparent 20rem),
+    linear-gradient(180deg, #ecfeff 0%, #f8fafc 46%, #eef6fb 100%);
+}
 
-  .maintenance-topbar h1,
-  .maintenance-settings-head h2,
-  .maintenance-section-head h2,
-  .maintenance-vehicle-copy h2,
-  .maintenance-log-list strong,
-  .maintenance-timeline strong,
-  .maintenance-system-row strong,
-  .maintenance-subcategory-list strong {
-    color: #0f172a;
-  }
+.light .maintenance-topbar h1,
+.light .maintenance-settings-head h2,
+.light .maintenance-section-head h2,
+.light .maintenance-vehicle-copy h2,
+.light .maintenance-log-list strong,
+.light .maintenance-timeline strong,
+.light .maintenance-system-row strong,
+.light .maintenance-subcategory-list strong {
+  color: #0f172a;
 }
 
 /* Maintenance density pass: keep the premium look, but match the compact mobile references. */
@@ -1555,6 +1556,189 @@
 
 .maintenance-form-preview strong {
   font-size: 0.9rem;
+}
+
+.light .maintenance-fixed-zone {
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(236, 254, 255, 0.96) 100%);
+  box-shadow: 0 1rem 1.75rem rgba(15, 23, 42, 0.1);
+}
+
+.light .maintenance-topbar p,
+.light .maintenance-settings-head p,
+.light .maintenance-section-head p,
+.light .maintenance-section-head span,
+.light .maintenance-vehicle-copy p,
+.light .maintenance-log-list small,
+.light .maintenance-timeline small,
+.light .maintenance-add-row small,
+.light .maintenance-subcategory-list small,
+.light .maintenance-reminder-head p,
+.light .maintenance-reminder-section h3,
+.light .maintenance-reminder-row small,
+.light .maintenance-permission-card small,
+.light .maintenance-reminder-row em {
+  color: #64748b;
+}
+
+.light .maintenance-tool-button,
+.light .maintenance-settings-head > button,
+.light .maintenance-tabs button,
+.light .maintenance-quick-actions button,
+.light .maintenance-section-head button,
+.light .maintenance-sort-button,
+.light .maintenance-reminder-head button {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  color: #0f172a;
+  box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, 0.06);
+}
+
+.light .maintenance-section-head button,
+.light .maintenance-settings-head > button:last-child,
+.light .maintenance-quick-actions button {
+  color: #0f766e;
+}
+
+.light .maintenance-tools-menu,
+.light .maintenance-filter-menu {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1.5rem 3rem rgba(15, 23, 42, 0.14);
+}
+
+.light .maintenance-tools-menu button,
+.light .maintenance-filter-menu button {
+  color: #334155;
+}
+
+.light .maintenance-tabs {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.light .maintenance-vehicle-card,
+.light .maintenance-health-card,
+.light .maintenance-due-panel,
+.light .maintenance-panel,
+.light .maintenance-history-panel,
+.light .maintenance-taxonomy-panel,
+.light .maintenance-stats-card,
+.light .maintenance-alert-card {
+  border-color: rgba(14, 165, 233, 0.18);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(236, 254, 255, 0.7)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.75), transparent);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.9), 0 1.25rem 2.5rem rgba(15, 23, 42, 0.09);
+}
+
+.light .maintenance-alert-card {
+  border-color: rgba(248, 113, 113, 0.42);
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.9), rgba(255, 255, 255, 0.84));
+  color: #b91c1c;
+}
+
+.light .maintenance-alert-card strong {
+  color: #7f1d1d;
+}
+
+.light .maintenance-alert-card small {
+  color: #64748b;
+}
+
+.light .maintenance-health-grid > div,
+.light .maintenance-stats-card > div,
+.light .maintenance-due-card,
+.light .maintenance-log-list button,
+.light .maintenance-timeline > button:not(.maintenance-add-row),
+.light .maintenance-add-row,
+.light .maintenance-system-row,
+.light .maintenance-subcategory-list > div,
+.light .maintenance-search,
+.light .maintenance-chip-row button {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  color: #334155;
+}
+
+.light .maintenance-health-grid strong,
+.light .maintenance-stats-card strong,
+.light .maintenance-due-card strong,
+.light .maintenance-due-card small,
+.light .maintenance-add-row strong,
+.light .maintenance-reminder-head h2,
+.light .maintenance-reminder-row strong,
+.light .maintenance-permission-card strong {
+  color: #0f172a;
+}
+
+.light .maintenance-health-grid svg,
+.light .maintenance-stats-card svg {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.light .maintenance-due-card.overdue {
+  border-color: rgba(248, 113, 113, 0.38);
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.82), rgba(255, 255, 255, 0.76));
+}
+
+.light .maintenance-system-strip button,
+.light .maintenance-system-row > button:not(:first-child),
+.light .maintenance-subcategory-list button {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: #334155;
+}
+
+.light .maintenance-system-strip button {
+  color: #0f766e;
+}
+
+.light .maintenance-search input {
+  color: #0f172a;
+}
+
+.light .maintenance-search input::placeholder {
+  color: #94a3b8;
+}
+
+.light .maintenance-empty-card {
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.light .maintenance-reminder-sheet {
+  color: #0f172a;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(45, 212, 191, 0.14), transparent 18rem),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(236, 254, 255, 0.98));
+}
+
+.light .maintenance-reminder-row,
+.light .maintenance-permission-card {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.light .maintenance-form-screen {
+  color: #0f172a;
+  background:
+    radial-gradient(circle at 75% 8%, rgba(20, 184, 166, 0.13), transparent 24rem),
+    linear-gradient(180deg, #ecfeff 0%, #f8fafc 55%, #eef6fb 100%);
+}
+
+.light .maintenance-form-screen h1,
+.light .maintenance-form-screen h2,
+.light .maintenance-form-screen .screen-title,
+.light .maintenance-form-screen h2 {
+  color: #0f172a !important;
+}
+
+.light .maintenance-form-screen .glass-card,
+.light .maintenance-form-screen .card,
+.light .maintenance-form-screen form > div,
+.light .maintenance-form-screen [class*="rounded"] {
+  border-color: rgba(15, 23, 42, 0.1);
 }
 
 @media (max-width: 430px) {

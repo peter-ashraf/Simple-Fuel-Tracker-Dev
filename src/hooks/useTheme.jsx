@@ -1,9 +1,10 @@
-import { createContext, useContext, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 
 const ThemeContext = createContext();
 const DARK_STATUS_BAR_COLOR = '#02070d';
 const LIGHT_STATUS_BAR_COLOR = '#f8fafc';
+const THEME_OPTIONS = new Set(['light', 'dark', 'system']);
 const TEXT_SIZE_OPTIONS = {
   compact: 0.94,
   default: 1,
@@ -24,67 +25,120 @@ const ensureMetaTag = (selector, attributes) => {
   return element;
 };
 
+const normalizeTheme = (value) => (THEME_OPTIONS.has(value) ? value : 'system');
+
+const getSystemPrefersDark = () => (
+  typeof window !== 'undefined'
+  && typeof window.matchMedia === 'function'
+  && window.matchMedia('(prefers-color-scheme: dark)').matches
+);
+
+const getResolvedTheme = (theme) => {
+  const normalizedTheme = normalizeTheme(theme);
+  if (normalizedTheme === 'system') {
+    return getSystemPrefersDark() ? 'dark' : 'light';
+  }
+  return normalizedTheme;
+};
+
+const applyResolvedTheme = (resolvedTheme, selectedTheme) => {
+  if (typeof document === 'undefined') return;
+
+  const root = document.documentElement;
+  const isDark = resolvedTheme === 'dark';
+  const activeColor = isDark ? DARK_STATUS_BAR_COLOR : LIGHT_STATUS_BAR_COLOR;
+
+  root.classList.remove('light', 'dark');
+  root.classList.add(resolvedTheme);
+  root.dataset.theme = selectedTheme;
+  root.dataset.resolvedTheme = resolvedTheme;
+
+  ensureMetaTag('meta[name="theme-color"]:not([media])', {
+    name: 'theme-color',
+    id: 'theme-color-meta',
+    content: activeColor,
+  });
+  ensureMetaTag('meta[name="theme-color"][media="(prefers-color-scheme: light)"]', {
+    name: 'theme-color',
+    id: 'theme-color-meta-light',
+    media: '(prefers-color-scheme: light)',
+    content: LIGHT_STATUS_BAR_COLOR,
+  });
+  ensureMetaTag('meta[name="theme-color"][media="(prefers-color-scheme: dark)"]', {
+    name: 'theme-color',
+    id: 'theme-color-meta-dark',
+    media: '(prefers-color-scheme: dark)',
+    content: DARK_STATUS_BAR_COLOR,
+  });
+  ensureMetaTag('meta[name="apple-mobile-web-app-status-bar-style"]', {
+    name: 'apple-mobile-web-app-status-bar-style',
+    content: isDark ? 'black-translucent' : 'default',
+  });
+  ensureMetaTag('meta[name="msapplication-navbutton-color"]', {
+    name: 'msapplication-navbutton-color',
+    content: activeColor,
+  });
+
+  root.style.colorScheme = resolvedTheme;
+  root.style.backgroundColor = activeColor;
+  document.body.style.backgroundColor = activeColor;
+};
+
+const addMediaQueryChangeListener = (mediaQuery, listener) => {
+  if (typeof mediaQuery.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', listener);
+    return () => mediaQuery.removeEventListener('change', listener);
+  }
+
+  if (typeof mediaQuery.addListener === 'function') {
+    mediaQuery.addListener(listener);
+    return () => mediaQuery.removeListener(listener);
+  }
+
+  return () => {};
+};
+
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useLocalStorage('fueltracker-theme', 'system');
+  const [theme, setStoredTheme] = useLocalStorage('fueltracker-theme', 'system');
   const [textSize, setTextSize] = useLocalStorage('fueltracker-text-size', 'default');
+  const normalizedTheme = normalizeTheme(theme);
+  const [resolvedTheme, setResolvedTheme] = useState(() => getResolvedTheme(normalizedTheme));
 
-  // Update theme-color meta tag for PWA and iOS status bar
-  const updateThemeColorMeta = (isDark) => {
-    const activeColor = isDark ? DARK_STATUS_BAR_COLOR : LIGHT_STATUS_BAR_COLOR;
-
-    ensureMetaTag('meta[name="theme-color"]:not([media])', {
-      name: 'theme-color',
-      id: 'theme-color-meta',
-      content: activeColor,
-    });
-    ensureMetaTag('meta[name="theme-color"][media="(prefers-color-scheme: light)"]', {
-      name: 'theme-color',
-      id: 'theme-color-meta-light',
-      media: '(prefers-color-scheme: light)',
-      content: LIGHT_STATUS_BAR_COLOR,
-    });
-    ensureMetaTag('meta[name="theme-color"][media="(prefers-color-scheme: dark)"]', {
-      name: 'theme-color',
-      id: 'theme-color-meta-dark',
-      media: '(prefers-color-scheme: dark)',
-      content: DARK_STATUS_BAR_COLOR,
-    });
-    ensureMetaTag('meta[name="apple-mobile-web-app-status-bar-style"]', {
-      name: 'apple-mobile-web-app-status-bar-style',
-      content: isDark ? 'black-translucent' : 'default',
-    });
-
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-    document.documentElement.style.backgroundColor = activeColor;
-    document.body.style.backgroundColor = activeColor;
-  };
+  const setTheme = useCallback((nextTheme) => {
+    setStoredTheme(normalizeTheme(nextTheme));
+  }, [setStoredTheme]);
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-
-    const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    root.classList.add(isDark ? 'dark' : 'light');
-    
-    // Update theme-color for iOS status bar and PWA
-    updateThemeColorMeta(isDark);
-  }, [theme]);
+    if (theme !== normalizedTheme) {
+      setStoredTheme(normalizedTheme);
+    }
+  }, [normalizedTheme, setStoredTheme, theme]);
 
   useEffect(() => {
-    if (theme !== 'system') return;
-    
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      const root = window.document.documentElement;
-      root.classList.remove('light', 'dark');
-      root.classList.add(e.matches ? 'dark' : 'light');
-      // Update theme-color when system theme changes
-      updateThemeColorMeta(e.matches);
+    if (typeof window === 'undefined') return undefined;
+
+    const syncTheme = () => {
+      const nextResolvedTheme = getResolvedTheme(normalizedTheme);
+      setResolvedTheme(nextResolvedTheme);
+      applyResolvedTheme(nextResolvedTheme, normalizedTheme);
     };
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+
+    syncTheme();
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    let removeMediaQueryListener = () => {};
+    if (normalizedTheme === 'system') {
+      removeMediaQueryListener = addMediaQueryChangeListener(mediaQuery, syncTheme);
+    }
+    document.addEventListener('visibilitychange', syncTheme);
+    window.addEventListener('pageshow', syncTheme);
+
+    return () => {
+      removeMediaQueryListener();
+      document.removeEventListener('visibilitychange', syncTheme);
+      window.removeEventListener('pageshow', syncTheme);
+    };
+  }, [normalizedTheme]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -96,8 +150,16 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--app-text-scale', TEXT_SIZE_OPTIONS[normalizedTextSize]);
   }, [textSize]);
 
+  const value = useMemo(() => ({
+    theme: normalizedTheme,
+    setTheme,
+    resolvedTheme,
+    textSize,
+    setTextSize,
+  }), [normalizedTheme, resolvedTheme, setTheme, setTextSize, textSize]);
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, textSize, setTextSize }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
