@@ -49,6 +49,12 @@ const MaintenanceLogEdit = lazy(() =>
 const DataMigrationModal = lazy(() => import("./components/DataMigrationModal"));
 
 const STARTUP_LOCAL_FALLBACK_MS = 800;
+const routeTransition = {
+  initial: { opacity: 0, y: 8, filter: "blur(2px)" },
+  animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+  exit: { opacity: 0, y: -6, filter: "blur(1px)" },
+  transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+};
 
 const getCloudSyncService = () =>
   import("./services/cloudSyncService").then(
@@ -541,9 +547,14 @@ export default function App() {
   const isToolRoute =
     location.pathname.startsWith("/trip-estimator") ||
     location.pathname.startsWith("/tyre-calculator");
-  const showLegacyHeader = !isPrimaryRoute && !isToolRoute;
+  const isMaintenanceRoute = location.pathname.startsWith("/maintenance");
+  const isMaintenanceEditorRoute =
+    location.pathname.startsWith("/maintenance/add") ||
+    location.pathname.startsWith("/maintenance/edit");
+  const showLegacyHeader = !isPrimaryRoute && !isToolRoute && !isMaintenanceRoute;
   const showBottomNav =
     location.pathname !== "/add" &&
+    !isMaintenanceEditorRoute &&
     !location.pathname.startsWith("/trip-estimator") &&
     !location.pathname.startsWith("/tyre-calculator");
 
@@ -561,13 +572,13 @@ export default function App() {
                 ? "analytics-app-shell"
                 : isSettingsRoute
                   ? "settings-app-shell"
-                  : isToolRoute
+                  : isToolRoute || isMaintenanceRoute
                     ? "tool-app-shell"
                     : "max-w-lg",
       )}
     >
       {showLegacyHeader && <Header />}
-      {IS_DEV_BUILD && (
+      {IS_DEV_BUILD && !isMaintenanceRoute && (
         <div
           className={cn(
             "dev-badge fixed left-1/2 z-50 -translate-x-1/2 px-3 py-1 text-[10px] font-black uppercase tracking-widest",
@@ -595,6 +606,10 @@ export default function App() {
                   ? "settings-route-main overflow-hidden p-0"
                   : isToolRoute
                     ? "tool-route-main overflow-y-auto p-0"
+                    : isMaintenanceEditorRoute
+                      ? "tool-route-main overflow-y-auto p-0"
+                      : isMaintenanceRoute
+                        ? "tool-route-main overflow-hidden p-0"
                     : "overflow-y-auto px-4",
           !isDashboardRoute &&
             !isFillUpRoute &&
@@ -602,6 +617,7 @@ export default function App() {
             !isAnalyticsRoute &&
             !isSettingsRoute &&
             !isToolRoute &&
+            !isMaintenanceRoute &&
             (showLegacyHeader
               ? "pt-[calc(5rem+env(safe-area-inset-top))]"
               : "pt-[calc(2.5rem+env(safe-area-inset-top))]"),
@@ -610,27 +626,39 @@ export default function App() {
             !isHistoryRoute &&
             !isAnalyticsRoute &&
             !isToolRoute &&
+            !isMaintenanceRoute &&
             (showBottomNav
               ? "pb-[calc(7rem+env(safe-area-inset-bottom))]"
               : "pb-[calc(2.5rem+env(safe-area-inset-bottom))]"),
         )}
       >
         <Suspense fallback={<PageLoading />}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/add" element={<FillUpForm />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/trip-estimator" element={<TripCostEstimator />} />
-            <Route path="/tyre-calculator" element={<TyreCalculator />} />
-            <Route path="/maintenance" element={<Maintenance />} />
-            <Route path="/maintenance/add" element={<MaintenanceForm />} />
-            <Route
-              path="/maintenance/edit/:id"
-              element={<MaintenanceLogEdit />}
-            />
-            <Route path="/settings" element={<SettingsScreen />} />
-          </Routes>
+          <AnimatePresence mode="wait" initial={false}>
+            <Motion.div
+              key={location.pathname}
+              className="h-full min-h-0"
+              initial={routeTransition.initial}
+              animate={routeTransition.animate}
+              exit={routeTransition.exit}
+              transition={routeTransition.transition}
+            >
+              <Routes location={location}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/add" element={<FillUpForm />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/trip-estimator" element={<TripCostEstimator />} />
+                <Route path="/tyre-calculator" element={<TyreCalculator />} />
+                <Route path="/maintenance" element={<Maintenance />} />
+                <Route path="/maintenance/add" element={<MaintenanceForm />} />
+                <Route
+                  path="/maintenance/edit/:id"
+                  element={<MaintenanceLogEdit />}
+                />
+                <Route path="/settings" element={<SettingsScreen />} />
+              </Routes>
+            </Motion.div>
+          </AnimatePresence>
         </Suspense>
       </main>
 

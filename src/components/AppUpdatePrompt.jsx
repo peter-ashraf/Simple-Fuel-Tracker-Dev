@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { IS_DEV_BUILD } from "../config/appConfig";
 import { Modal } from "./ui";
 
 function AppUpdatePrompt() {
@@ -10,6 +11,8 @@ function AppUpdatePrompt() {
   const { t } = useTranslation();
 
   useEffect(() => {
+    if (IS_DEV_BUILD) return undefined;
+
     const handleUpdateAvailable = (event) => {
       if (event.detail?.registration) {
         setRegistration(event.detail.registration);

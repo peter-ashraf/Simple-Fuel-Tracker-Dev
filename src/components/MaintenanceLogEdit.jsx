@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Wrench, CalendarBlank, Tag, CaretLeft, Shield, Trash, FloppyDisk } from '@phosphor-icons/react';
+import { Wrench, CalendarBlank, Tag, CaretLeft, Shield, Trash, FloppyDisk, CheckCircle, Bell } from '@phosphor-icons/react';
 import { useFuel } from '../hooks/useFuelContext';
 import { Input, Label, Card, PageWrapper, ConfirmModal, cn } from './ui';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import './Maintenance.css';
 
 const parseDescription = (description) => {
   if (!description || typeof description !== 'string') return {};
@@ -72,14 +73,21 @@ export default function MaintenanceLogEdit() {
       ? category.name || category.id
       : i18n.exists(category.id) ? t(category.id) : category.name || category.id)
     : t('unknown');
+  const nextDueOdometer =
+    performedAtODO && intervalKm
+      ? Number(performedAtODO) + Number(intervalKm)
+      : null;
 
   return (
     <>
       {createPortal(
-        <div className="fixed-button-container">
+        <div className="fixed-button-container maintenance-form-actions">
           <div className="max-w-lg mx-auto flex gap-3">
             <button type="button" onClick={() => navigate('/maintenance')} className="flex-1 px-6 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold h-[64px] rounded-[1.5rem] flex items-center justify-center gap-2 transition-all">
               <CaretLeft weight="duotone" className={cn("w-5 h-5", isRtl && "rotate-180")} /> <span>{t('back')}</span>
+            </button>
+            <button type="button" onClick={() => navigate(`/maintenance/add?type=${log.type}`)} className="px-6 bg-emerald-500/15 dark:bg-emerald-500/10 text-emerald-500 font-bold h-[64px] rounded-[1.5rem] flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+              <CheckCircle weight="duotone" className="w-5 h-5" />
             </button>
             <button type="button" onClick={() => setDeleteModal(true)} className="px-6 bg-red-50 dark:bg-red-500/10 text-red-500 font-bold h-[64px] rounded-[1.5rem] flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
               <Trash weight="duotone" className="w-5 h-5" />
@@ -92,7 +100,7 @@ export default function MaintenanceLogEdit() {
         document.body
       )}
 
-      <PageWrapper>
+      <PageWrapper className="maintenance-form-screen">
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ backgroundColor: category?.color }}><Wrench weight="duotone" className="w-5 h-5" /></div>
@@ -113,25 +121,35 @@ export default function MaintenanceLogEdit() {
                 </div>
                 <div>
                   <Label className="flex items-center gap-2"><CalendarBlank weight="duotone" className="w-4 h-4" /> {t('odometer')} (km) *</Label>
-                  <Input type="number" value={performedAtODO} onChange={(e) => setPerformedAtODO(e.target.value)} placeholder="..." required />
+                  <Input type="number" inputMode="numeric" value={performedAtODO} onChange={(e) => setPerformedAtODO(e.target.value)} placeholder="..." required />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="flex items-center gap-2"><Wrench weight="duotone" className="w-4 h-4" /> {t('distance')} (km) *</Label>
-                    <Input type="number" value={intervalKm} onChange={(e) => setIntervalKm(e.target.value)} placeholder="..." required />
+                    <Input type="number" inputMode="numeric" value={intervalKm} onChange={(e) => setIntervalKm(e.target.value)} placeholder="..." required />
                   </div>
                   <div>
                     <Label className="flex items-center gap-2"><Shield weight="duotone" className="w-4 h-4" /> {t('safety_margin')}</Label>
-                    <Input type="number" value={safetyMarginKm} onChange={(e) => setSafetyMarginKm(e.target.value)} placeholder="..." />
+                    <Input type="number" inputMode="numeric" value={safetyMarginKm} onChange={(e) => setSafetyMarginKm(e.target.value)} placeholder="..." />
                   </div>
                 </div>
                 <div>
                   <Label className="flex items-center gap-2"><Tag className="w-4 h-4" /> {t('price')} ({t('currency')})</Label>
-                  <Input type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} placeholder={t('optional')} />
+                  <Input type="number" inputMode="decimal" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} placeholder={t('optional')} />
                 </div>
                 <div>
                   <Label className="flex items-center gap-2"><Tag className="w-4 h-4" /> {t('notes')}</Label>
                   <textarea className="input-field min-h-[100px]" rows="3" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="..." />
+                </div>
+                <div className="maintenance-form-preview">
+                  <div>
+                    <Label className="flex items-center gap-2"><CalendarBlank weight="duotone" className="w-4 h-4" /> Next Due Odometer</Label>
+                    <strong>{nextDueOdometer ? `${nextDueOdometer.toLocaleString()} km` : '-'}</strong>
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2"><Bell weight="duotone" className="w-4 h-4" /> Reminder</Label>
+                    <strong>{safetyMarginKm ? `${Number(safetyMarginKm).toLocaleString()} km before` : 'At due point'}</strong>
+                  </div>
                 </div>
               </div>
             </Card>

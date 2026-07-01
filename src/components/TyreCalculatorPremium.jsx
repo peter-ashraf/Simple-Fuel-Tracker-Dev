@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowCounterClockwise,
   Calculator,
   CaretDown,
   CaretLeft,
-  Check,
   Clock,
   FloppyDisk,
   Gauge,
@@ -24,7 +23,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ConfirmModal, Input, Modal, cn } from "./ui";
-import { VehicleArt } from "./PremiumUI";
 import { useFuel } from "../hooks/useFuelContext";
 import {
   commonTyreSizes,
@@ -32,11 +30,6 @@ import {
   formatTyreSize,
   validateTyreDimensions,
 } from "../utils/tyreCalculator";
-import {
-  getDefaultVehicleImage,
-  resolveVehicleImage,
-  scaleVehicleHeroImageSettings,
-} from "../utils/vehicleImageResolver";
 import "./tools/ToolScreen.css";
 import "./TyreCalculator.css";
 
@@ -49,26 +42,10 @@ const getDifferenceTone = (value, inverse = false) => {
   return positive !== inverse ? "negative" : "positive";
 };
 
-const getVehiclePlate = (vehicle) =>
-  vehicle?.plateNumber ||
-  vehicle?.plate_number ||
-  vehicle?.registration ||
-  vehicle?.licensePlate ||
-  vehicle?.license_plate ||
-  "";
-
-const getVehicleMake = (vehicle) =>
-  vehicle?.make ||
-  vehicle?.brand ||
-  vehicle?.manufacturer ||
-  vehicle?.manufacturerName ||
-  vehicle?.manufacturer_name ||
-  "Vehicle";
-
-const StatLine = ({ icon: Icon, label, original, delta, next, tone }) => (
+const StatLine = ({ icon: LineIcon, label, original, delta, next, tone }) => (
   <div className="tyre-result-line">
     <span className="tyre-line-icon">
-      <Icon weight="duotone" />
+      <LineIcon weight="duotone" />
     </span>
     <span className="tyre-line-label">{label}</span>
     <strong className="is-original">{original}</strong>
@@ -353,34 +330,8 @@ export default function TyreCalculatorPremium() {
   const [result, setResult] = useState(null);
   const [saved, setSaved] = useState(false);
   const [sizesOpen, setSizesOpen] = useState(false);
-  const toolsDropdownRef = useRef(null);
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [impactSpeedKmh, setImpactSpeedKmh] = useState(100);
   const [validationErrors, setValidationErrors] = useState([]);
-  const [vehicleImage, setVehicleImage] = useState({
-    src: getDefaultVehicleImage(),
-    settings: {},
-  });
-  useEffect(() => {
-    let isMounted = true;
-    resolveVehicleImage(activeVehicle).then((resolved) => {
-      if (isMounted) setVehicleImage(resolved);
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [activeVehicle]);
-
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (toolsDropdownRef.current && !toolsDropdownRef.current.contains(event.target)) {
-        setIsToolsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const runCalculation = (speedKmh = impactSpeedKmh) => {
     setSaved(false);
@@ -429,9 +380,6 @@ export default function TyreCalculatorPremium() {
     setTimeout(() => setSaved(false), 3000);
   };
 
-  const heroSettings = scaleVehicleHeroImageSettings(vehicleImage.settings);
-  const plate = getVehiclePlate(activeVehicle);
-
   return (
     <>
       {createPortal(
@@ -452,17 +400,6 @@ export default function TyreCalculatorPremium() {
             >
               <ArrowCounterClockwise weight="bold" className="tool-action-icon" />
               <span>Reset</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="tool-action-button tool-action-secondary"
-            >
-              <CaretLeft
-                weight="bold"
-                className={cn("tool-action-icon", isRtl && "rotate-180")}
-              />
-              <span>{t("back")}</span>
             </button>
             <button
               type="button"
@@ -497,70 +434,6 @@ export default function TyreCalculatorPremium() {
               <Info weight="bold" />
             </button>
           </header>
-
-          <section className="tyre-vehicle-row">
-            <div className="tyre-vehicle-chip tool-glass-panel">
-              <VehicleArt
-                className="tool-vehicle-art tyre-chip-art"
-                src={vehicleImage.src}
-                fallbackSrcs={[getDefaultVehicleImage()]}
-                alt={`${activeVehicle?.name || "Vehicle"} image`}
-                imageOffsetX={heroSettings.offsetX}
-                imageOffsetY={heroSettings.offsetY}
-                imageZoom={heroSettings.zoom}
-                imageRotate={heroSettings.rotate}
-                imageFlipX={heroSettings.flipX}
-                imageFlipY={heroSettings.flipY}
-              />
-              <div>
-                <span>{getVehicleMake(activeVehicle)}</span>
-                <strong>{activeVehicle?.name || t("select_vehicle")}</strong>
-                {plate && <small>{plate}</small>}
-              </div>
-              <CaretDown weight="bold" />
-            </div>
-            <div className="tool-tools-wrap tyre-tools-wrap" ref={toolsDropdownRef}>
-              <button
-                type="button"
-                className="tool-pill-button tool-tools-trigger tyre-tools-button"
-                onClick={() => setIsToolsOpen((value) => !value)}
-                aria-haspopup="menu"
-                aria-expanded={isToolsOpen}
-              >
-                <Wrench weight="duotone" />
-                <span>Tools</span>
-                <CaretDown weight="bold" className={cn("tool-select-caret", isToolsOpen && "is-open")} />
-              </button>
-              <AnimatePresence>
-                {isToolsOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                    transition={{ type: "spring", stiffness: 340, damping: 26 }}
-                    className="tool-tools-menu"
-                    role="menu"
-                  >
-                    <button type="button" className="tool-tools-menu-item" role="menuitem" onClick={() => { setIsToolsOpen(false); navigate("/trip-estimator"); }}>
-                      <Gauge weight="duotone" />
-                      <span>Trip Estimator</span>
-                      <CaretLeft weight="bold" className="tool-menu-next" />
-                    </button>
-                    <button type="button" className="tool-tools-menu-item is-active" role="menuitem" onClick={() => setIsToolsOpen(false)}>
-                      <RoadHorizon weight="duotone" />
-                      <span>Tire Comparison</span>
-                      <Check weight="bold" />
-                    </button>
-                    <button type="button" className="tool-tools-menu-item" role="menuitem" onClick={() => { setIsToolsOpen(false); navigate("/maintenance"); }}>
-                      <Wrench weight="duotone" />
-                      <span>Maintenance</span>
-                      <CaretLeft weight="bold" className="tool-menu-next" />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </section>
 
           <section className="tool-card tyre-overview-card">
             <div className="tool-section-heading">

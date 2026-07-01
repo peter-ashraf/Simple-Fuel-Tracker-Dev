@@ -13,26 +13,17 @@ import {
   ShieldWarning,
   CaretDown,
   Check,
-  Square,
-  CheckSquare,
   X,
-  Palette,
-  Layout,
   Pulse,
-  Drop,
   Shield,
-  BatteryCharging,
-  Car,
-  Disc,
-  Lightning,
   Clock,
   DotsThreeVertical,
+  CaretLeft,
   CaretRight,
   FloppyDisk,
   Warning,
-  Engine,
-  Tire,
   FilePdf,
+  ListChecks,
 } from "@phosphor-icons/react";
 import { useFuel } from "../hooks/useFuelContext";
 import { serviceHistoryPdf } from "../services/serviceHistoryPdf";
@@ -53,6 +44,13 @@ import { makeMaintenanceTypeKey } from "../utils/maintenanceTypeKey";
 import { calculateAverageDailyDistance } from "../utils/calculations";
 import { buildMaintenanceForecast, getReminderState } from "../utils/maintenanceForecast";
 import { useNotifications } from "../hooks/useNotifications";
+import { VehicleArt } from "./PremiumUI";
+import {
+  DEFAULT_VEHICLE_IMAGE_SETTINGS,
+  resolveVehicleImage,
+  scaleVehicleHeroImageSettings,
+} from "../utils/vehicleImageResolver";
+import "./Maintenance.css";
 
 const MAINTENANCE_TAXONOMY_DIRTY_KEY = "fueltracker-maintenance-taxonomy-dirty";
 
@@ -141,12 +139,23 @@ export default function Maintenance() {
   } = useFuel();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { notificationsEnabled } = useNotifications();
+  const {
+    notificationsEnabled,
+    permissionState,
+    isNotificationSupported,
+    toggleNotifications,
+  } = useNotifications();
 
   const [activeTab, setActiveTab] = useState("overview"); // overview, history, settings
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
+  const [vehicleImage, setVehicleImage] = useState({
+    src: null,
+    settings: DEFAULT_VEHICLE_IMAGE_SETTINGS,
+  });
   const [selectedSystemId, setSelectedSystemId] = useState(null);
   const [selectedMaintenanceItemId, setSelectedMaintenanceItemId] = useState(null);
   const [deleteToast, setDeleteToast] = useState(null);
@@ -183,6 +192,7 @@ export default function Maintenance() {
   const [taxonomyUndoToast, setTaxonomyUndoToast] = useState(null);
 
   const categoryDropdownRef = useRef(null);
+  const toolsDropdownRef = useRef(null);
   const deleteMaintenanceEntryRef = useRef(deleteMaintenanceEntry);
   const isRtl = i18n.language.startsWith("ar");
 
@@ -199,10 +209,43 @@ export default function Maintenance() {
       ) {
         setDropdownOpen(false);
       }
+      if (
+        toolsDropdownRef.current &&
+        !toolsDropdownRef.current.contains(event.target)
+      ) {
+        setToolsOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    resolveVehicleImage(activeVehicle)
+      .then((image) => {
+        if (cancelled) return;
+        setVehicleImage({
+          src: image?.src || null,
+          settings: scaleVehicleHeroImageSettings(
+            image?.settings || DEFAULT_VEHICLE_IMAGE_SETTINGS,
+          ),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setVehicleImage({
+            src: null,
+            settings: DEFAULT_VEHICLE_IMAGE_SETTINGS,
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeVehicle]);
 
   useEffect(() => {
     if (!deleteToast) return undefined;
@@ -253,61 +296,6 @@ export default function Maintenance() {
         return dateB - dateA;
       });
   }, [maintenanceEntries, searchTerm, selectedCategory, getCategoryById]);
-
-  // Circular Progress Component
-  const CircularProgress = ({
-    size = 90,
-    strokeWidth = 6,
-    percentage = 0,
-    color = "#3b82f6",
-    children,
-  }) => {
-    const radius = (size - strokeWidth) / 2;
-    const circumference = radius * 2 * Math.PI;
-    const offset = circumference - (percentage / 100) * circumference;
-
-    return (
-      <div
-        className="relative flex items-center justify-center"
-        style={{ width: size, height: size }}
-      >
-        <svg
-          width={size}
-          height={size}
-          className={cn("transform", isRtl ? "rotate-90" : "-rotate-90")}
-        >
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            fill="transparent"
-            className="text-slate-100 dark:text-white/5"
-          />
-          <Motion.circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            fill="transparent"
-            strokeDasharray={circumference}
-            initial={{ strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.5 }}
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {children}
-          <span className="text-[10px] font-black mt-0.5" style={{ color }}>
-            {Math.round(percentage)}%
-          </span>
-        </div>
-      </div>
-    );
-  };
 
   const activeCategories = useMemo(
     () => categories.filter((category) => !category.deletedAt && !category.deleted_at),
@@ -803,101 +791,431 @@ export default function Maintenance() {
     ? `${t("all") || "All"} systems`
     : pdfSystemIds.map((id) => translateSystemName(activeMaintenanceSystems.find((system) => system.id === id)?.name || id)).join(", ");
 
-  return (
-    <div className="fixed inset-x-0 bottom-24 top-20 mx-auto flex w-full max-w-lg flex-col overflow-hidden px-5">
-      <div className="z-30 -mx-1 shrink-0 space-y-5 bg-white/95 px-1 pb-4 pt-1 backdrop-blur-xl dark:bg-black/95">
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            {t("maintenance")}
-          </h2>
-        </div>
+  const activeEntries = maintenanceEntries.filter(
+    (entry) => !entry.deletedAt && !entry.deleted_at && !entry.deleted,
+  );
+  const currentYear = new Date().getFullYear();
+  const completedThisYear = activeEntries.filter((entry) => {
+    const rawDate = entry.date || entry.timestamp || entry.createdAt;
+    if (!rawDate) return false;
+    const parsed = new Date(rawDate);
+    return !Number.isNaN(parsed.getTime()) && parsed.getFullYear() === currentYear;
+  });
+  const totalSpentThisYear = completedThisYear.reduce(
+    (sum, entry) => sum + (Number(entry.cost) || 0),
+    0,
+  );
+  const overdueItems = categoryProgress.filter((item) => item.status === "overdue");
+  const dueSoonItems = categoryProgress.filter((item) => item.status === "due-soon");
+  const trackedItems = categoryProgress.filter((item) => item.isTracked);
+  const nextDueItem = [...dueSoonItems, ...trackedItems]
+    .filter((item) => Number.isFinite(Number(item.remainingKm)))
+    .sort((a, b) => Number(a.remainingKm) - Number(b.remainingKm))[0];
+  const healthStatus =
+    overdueItems.length > 0
+      ? "attention"
+      : dueSoonItems.length > 0
+        ? "watch"
+        : trackedItems.length > 0
+          ? "good"
+          : "untracked";
+  const vehicleName = activeVehicle?.name || t("select_vehicle") || "Vehicle";
+  const vehicleModel =
+    activeVehicle?.model ||
+    activeVehicle?.variant ||
+    activeVehicle?.make ||
+    activeVehicle?.brand ||
+    "";
+  const vehicleFuel =
+    activeVehicle?.fuelType ||
+    activeVehicle?.fuel_type ||
+    activeVehicle?.fuel ||
+    "";
+  const vehiclePlate =
+    activeVehicle?.plate ||
+    activeVehicle?.plateNumber ||
+    activeVehicle?.licensePlate ||
+    activeVehicle?.registration ||
+    "";
+  const vehicleImageSettings = vehicleImage.settings || DEFAULT_VEHICLE_IMAGE_SETTINGS;
 
-        <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-2xl relative z-20">
-          {["overview", "history", "settings"].map((tab) => (
+  const formatDueText = (item) => {
+    if (!item?.isTracked) return t("untracked");
+    if (item.status === "overdue") {
+      return `${t("overdue")} ${t("by") || "by"} ${Math.abs(Number(item.remainingKm) || 0).toLocaleString()} km`;
+    }
+    if (Number.isFinite(Number(item.daysRemaining)) && Number(item.daysRemaining) <= 30) {
+      return `${t("due_in") || "Due in"} ${Math.max(0, Math.round(Number(item.daysRemaining)))} ${t("days") || "days"}`;
+    }
+    return `${t("due_in") || "Due in"} ${Math.max(0, Number(item.remainingKm) || 0).toLocaleString()} km`;
+  };
+
+  const getSystemForItem = (itemId) =>
+    activeMaintenanceSystems.find((system) => system.categories?.includes(itemId));
+
+  const renderServiceIcon = (item, className = "w-6 h-6") => {
+    const system = getSystemForItem(item?.id);
+    const Icon = ICON_MAP[system?.icon] || Wrench;
+    return <Icon weight="duotone" className={className} />;
+  };
+
+  return (
+    <div className="maintenance-premium-screen">
+      <div className="maintenance-scroll">
+        {activeTab !== "settings" && (
+          <div className={cn("maintenance-fixed-zone", activeTab === "overview" && "with-context-actions")}>
+            <header className="maintenance-topbar">
+              <div>
+                <h1>{activeTab === "history" ? "Maintenance History" : "Maintenance"}</h1>
+                <p>Simple Fuel Tracker</p>
+              </div>
+              <div className="maintenance-tools" ref={toolsDropdownRef}>
+                <button
+                  type="button"
+                  className="maintenance-tool-button"
+                  onClick={() => setToolsOpen((open) => !open)}
+                >
+                  <Wrench weight="duotone" />
+                  <span>{t("tools")}</span>
+                  <CaretDown weight="bold" className={cn(toolsOpen && "rotate-180")} />
+                </button>
+                <AnimatePresence>
+                  {toolsOpen && (
+                    <Motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                      className="maintenance-tools-menu"
+                    >
+                      <button type="button" onClick={() => { setActiveTab("history"); setToolsOpen(false); }}>
+                        <ListChecks weight="duotone" /> {t("history")}
+                      </button>
+                      <button type="button" onClick={() => { setActiveTab("settings"); setToolsOpen(false); }}>
+                        <GearSix weight="duotone" /> {t("systems")}
+                      </button>
+                      <button type="button" onClick={() => { setRemindersOpen(true); setToolsOpen(false); }}>
+                        <Bell weight="duotone" /> {t("reminders")}
+                      </button>
+                      <button type="button" onClick={() => { setPdfOptionsOpen(true); setToolsOpen(false); }} disabled={filteredEntries.length === 0}>
+                        <FilePdf weight="duotone" /> {t("export") || "Export PDF"}
+                      </button>
+                    </Motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </header>
+
+            {activeTab === "overview" && (
+              <>
+                <section className="maintenance-vehicle-card maintenance-context-card">
+                  <div className="maintenance-vehicle-copy">
+                    <span>My Car <i /> Active</span>
+                    <h2>{vehicleName}</h2>
+                    <p>{[vehicleModel, vehicleFuel].filter(Boolean).join(" - ") || vehicleFuel || "Vehicle"}</p>
+                    <p>{[vehiclePlate, currentOdometer ? `${Number(currentOdometer).toLocaleString()} km` : null].filter(Boolean).join(" - ")}</p>
+                  </div>
+                  <VehicleArt
+                    className="maintenance-vehicle-art"
+                    src={vehicleImage.src}
+                    imageOffsetX={vehicleImageSettings.offsetX}
+                    imageOffsetY={vehicleImageSettings.offsetY}
+                    imageZoom={vehicleImageSettings.zoom}
+                    imageRotate={vehicleImageSettings.rotate}
+                    imageFlipX={vehicleImageSettings.flipX}
+                    imageFlipY={vehicleImageSettings.flipY}
+                    alt={vehicleName}
+                  />
+                </section>
+
+                <div className="maintenance-quick-actions maintenance-context-actions">
+                  <button type="button" onClick={() => setActiveTab("history")}><ListChecks weight="duotone" /> View All</button>
+                  <button type="button" onClick={() => navigate("/maintenance/add")}><Plus weight="bold" /> Add Service</button>
+                  <button type="button" onClick={() => setRemindersOpen(true)}><Bell weight="duotone" /> Reminders</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <nav className="maintenance-tabs" aria-label="Maintenance sections">
+          {[
+            ["overview", t("dashboard") || "Dashboard"],
+            ["history", t("history") || "History"],
+            ["settings", t("settings") || "Settings"],
+          ].map(([tab, label]) => (
             <button
               key={tab}
+              type="button"
+              className={cn(activeTab === tab && "active")}
               onClick={() => setActiveTab(tab)}
-              className={`relative flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all ${activeTab === tab ? "text-slate-900 dark:text-white" : "text-slate-500"}`}
             >
-              {activeTab === tab && (
-                <Motion.div
-                  layoutId="maintenanceActiveTab"
-                  className="absolute inset-0 bg-white dark:bg-slate-800 rounded-xl shadow-sm"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10">{t(tab)}</span>
+              {label}
             </button>
           ))}
-        </div>
-      </div>
+        </nav>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-24 no-scrollbar">
         <AnimatePresence mode="wait">
           {activeTab === "overview" && (
-            <Motion.div
+            <Motion.section
               key="overview"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="grid grid-cols-2 gap-4"
+              className="maintenance-stack maintenance-content-under-fixed"
             >
-            {systemStatus.map((system) => {
-              const isOverdue = system.status === "overdue";
-              const Icon = ICON_MAP[system.icon] || Wrench;
-              return (
-                <Card
-                  key={system.id}
-                  className={cn(
-                    "p-4 flex flex-col items-center text-center rounded-[2rem] cursor-pointer transition-all active:scale-[0.96]",
-                    isOverdue && "ring-2 ring-red-500/50 bg-red-500/5",
-                  )}
-                  onClick={() => setSelectedSystemId(system.id)}
+              {overdueItems.length > 0 && (
+                <button
+                  type="button"
+                  className="maintenance-alert-card"
+                  onClick={() => setSelectedSystemId(getSystemForItem(overdueItems[0].id)?.id)}
                 >
-                  <CircularProgress
-                    percentage={system.healthScore}
-                    color={system.displayColor}
-                    size={70}
-                    strokeWidth={5}
-                  >
-                    <Icon
-                      className={cn(
-                        "w-6 h-6",
-                        isOverdue
-                          ? "text-red-500"
-                          : system.status === "due-soon"
-                            ? "text-amber-500"
-                            : "text-slate-900 dark:text-white",
-                      )}
-                    />
-                  </CircularProgress>
-                  <div className="mt-3">
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight">
-                      {translateSystemName(system.name)}
-                    </h4>
-                    <p
-                      className={cn(
-                        "text-[10px] font-bold mt-0.5",
-                        isOverdue
-                          ? "text-red-500"
-                          : system.status === "due-soon"
-                            ? "text-amber-500"
-                            : "text-slate-500",
-                      )}
-                    >
-                      {system.desc}
-                    </p>
-                    <p className="text-[8px] font-medium text-slate-400 mt-0.5 uppercase">
-                      {system.subDesc}
-                    </p>
+                  <ShieldWarning weight="duotone" />
+                  <span>
+                    <strong>Maintenance attention required</strong>
+                    <small>{overdueItems.length} items overdue. Your car needs immediate attention.</small>
+                  </span>
+                  <CaretRight weight="bold" className={cn(isRtl && "rotate-180")} />
+                </button>
+              )}
+
+              <section className="maintenance-health-card" data-status={healthStatus}>
+                <div className="maintenance-section-head">
+                  <div>
+                    <h2>Maintenance Health</h2>
+                    <p>Overall status of your vehicle</p>
                   </div>
-                </Card>
-              );
-            })}
-            </Motion.div>
+                  <div className="maintenance-health-badge">
+                    {healthStatus === "attention" ? <Warning weight="duotone" /> : <Check weight="bold" />}
+                    <span>{healthStatus === "attention" ? "Attention Needed" : healthStatus === "watch" ? "Due Soon" : "Good"}</span>
+                  </div>
+                </div>
+                <div className="maintenance-health-grid">
+                  <div className="danger">
+                    <ShieldWarning weight="duotone" />
+                    <strong>{overdueItems.length}</strong>
+                    <span>Overdue</span>
+                    <small>{overdueItems.length ? "Needs action" : "All clear"}</small>
+                  </div>
+                  <div className="warning">
+                    <Clock weight="duotone" />
+                    <strong>{dueSoonItems.length}</strong>
+                    <span>Due Soon</span>
+                    <small>Upcoming items</small>
+                  </div>
+                  <div className="success">
+                    <Check weight="bold" />
+                    <strong>{completedThisYear.length}</strong>
+                    <span>Completed</span>
+                    <small>This Year</small>
+                  </div>
+                </div>
+              </section>
+
+              <section className="maintenance-due-panel">
+                {overdueItems.length > 0 && (
+                  <>
+                    <div className="maintenance-section-head compact">
+                      <h2>Overdue</h2>
+                      <button type="button" onClick={() => setActiveTab("history")}>View All <CaretRight weight="bold" /></button>
+                    </div>
+                    <div className="maintenance-card-row">
+                      {overdueItems.slice(0, 4).map((item) => (
+                        <button key={item.id} type="button" className="maintenance-due-card overdue" onClick={() => {
+                          setSelectedSystemId(getSystemForItem(item.id)?.id);
+                          setSelectedMaintenanceItemId(item.id);
+                        }}>
+                          <span>{renderServiceIcon(item)}</span>
+                          <strong>{translateCategoryName(item)}</strong>
+                          <em>{formatDueText(item)}</em>
+                          <small>{item.nextDueODO ? `Recommended at ${Number(item.nextDueODO).toLocaleString()} km` : "Review service schedule"}</small>
+                          <CaretRight weight="bold" />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <div className="maintenance-section-head compact">
+                  <h2>Due Soon</h2>
+                  <button type="button" onClick={() => setActiveTab("history")}>View All <CaretRight weight="bold" /></button>
+                </div>
+                <div className="maintenance-card-row">
+                  {(dueSoonItems.length ? dueSoonItems : categoryProgress.filter((item) => !item.isTracked).slice(0, 2)).slice(0, 4).map((item) => (
+                    <button key={item.id} type="button" className="maintenance-due-card due" onClick={() => {
+                      setSelectedSystemId(getSystemForItem(item.id)?.id);
+                      setSelectedMaintenanceItemId(item.id);
+                    }}>
+                      <span>{renderServiceIcon(item)}</span>
+                      <strong>{translateCategoryName(item)}</strong>
+                      <em>{formatDueText(item)}</em>
+                      <div className="maintenance-progress"><i style={{ width: `${Math.min(100, Math.max(8, Number(item.progressPercent) || 12))}%` }} /></div>
+                      <small>{item.nextDueODO ? `Due at ${Number(item.nextDueODO).toLocaleString()} km` : "Tap to add first service"}</small>
+                      <CaretRight weight="bold" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="maintenance-panel">
+                <div className="maintenance-section-head compact">
+                  <h2>Maintenance Systems</h2>
+                  <button type="button" onClick={() => setActiveTab("settings")}>View All <CaretRight weight="bold" /></button>
+                </div>
+                <div className="maintenance-system-strip">
+                  {systemStatus.map((system) => {
+                    const Icon = ICON_MAP[system.icon] || Wrench;
+                    return (
+                      <button key={system.id} type="button" onClick={() => setSelectedSystemId(system.id)} data-status={system.status}>
+                        <Icon weight="duotone" />
+                        <span>{translateSystemName(system.name)}</span>
+                        <Check weight="bold" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="maintenance-panel">
+                <div className="maintenance-section-head compact">
+                  <h2>Recent Service Logs</h2>
+                  <button type="button" onClick={() => setActiveTab("history")}>View All <CaretRight weight="bold" /></button>
+                </div>
+                <div className="maintenance-log-list compact">
+                  {filteredEntries.slice(0, 3).map((log) => {
+                    const category = getCategoryById(log.type);
+                    const rawDate = log.timestamp || log.createdAt || log.date;
+                    const parsedDate = rawDate ? new Date(rawDate) : null;
+                    const displayDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? format(parsedDate, "MMM d, yyyy") : "Unknown Date";
+                    const displayOdometer = Number(log.performedAtODO ?? log.odometer ?? 0).toLocaleString();
+                    return (
+                      <button key={log.id} type="button" onClick={() => navigate(`/maintenance/edit/${log.id}`)}>
+                        <span className="maintenance-log-icon" style={{ "--log-color": category?.color || "#14b8a6" }}>
+                          {renderServiceIcon(category)}
+                        </span>
+                        <span>
+                          <strong>{translateCategoryName(category)}</strong>
+                          <small>{displayDate} - {displayOdometer} km</small>
+                        </span>
+                        <em>Completed</em>
+                        <CaretRight weight="bold" className={cn(isRtl && "rotate-180")} />
+                      </button>
+                    );
+                  })}
+                  {filteredEntries.length === 0 && (
+                    <div className="maintenance-empty-card">
+                      <Wrench weight="duotone" />
+                      <strong>Untracked</strong>
+                      <p>No service records yet. Add your first maintenance record to start forecasting.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </Motion.section>
           )}
 
         {activeTab === "history" && (
+          <Motion.section
+            key="history-premium"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            className="maintenance-stack"
+          >
+            <section className="maintenance-vehicle-card history">
+              <div className="maintenance-vehicle-copy">
+                <h2>{vehicleName}</h2>
+                <p>{[vehicleModel, vehicleFuel].filter(Boolean).join(" - ")}</p>
+                <p>{vehiclePlate || `${Number(currentOdometer || 0).toLocaleString()} km`}</p>
+              </div>
+              <VehicleArt
+                className="maintenance-vehicle-art"
+                src={vehicleImage.src}
+                imageOffsetX={vehicleImageSettings.offsetX}
+                imageOffsetY={vehicleImageSettings.offsetY}
+                imageZoom={vehicleImageSettings.zoom}
+                imageRotate={vehicleImageSettings.rotate}
+                imageFlipX={vehicleImageSettings.flipX}
+                imageFlipY={vehicleImageSettings.flipY}
+                alt={vehicleName}
+              />
+            </section>
+
+            <section className="maintenance-stats-card">
+              <div><CalendarBlank weight="duotone" /><span>Total Services</span><strong>{completedThisYear.length}</strong></div>
+              <div><CurrencyDollar weight="duotone" /><span>Total Spent</span><strong>{totalSpentThisYear.toLocaleString()} {t("currency")}</strong></div>
+              <div><Wrench weight="duotone" /><span>Next Due</span><strong>{nextDueItem ? `${Math.max(0, Number(nextDueItem.remainingKm) || 0).toLocaleString()} km` : "-"}</strong></div>
+            </section>
+
+            <section className="maintenance-history-panel">
+              <div className="maintenance-history-filters">
+                <div className="maintenance-search">
+                  <MagnifyingGlass weight="duotone" />
+                  <input
+                    type="search"
+                    placeholder="Search by service, notes or cost..."
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                  />
+                </div>
+                <button type="button" className="maintenance-sort-button" onClick={() => setPdfOptionsOpen(true)}>
+                  <FilePdf weight="duotone" />
+                  <span>{t("export") || "Export"}</span>
+                </button>
+              </div>
+
+              <div className="maintenance-chip-row">
+                <button type="button" className={cn(selectedCategory === "all" && "active")} onClick={() => setSelectedCategory("all")}>All</button>
+                {activeCategories.slice(0, 5).map((cat) => (
+                  <button key={cat.id} type="button" className={cn(selectedCategory === cat.id && "active")} onClick={() => setSelectedCategory(cat.id)}>
+                    {translateCategoryName(cat)}
+                  </button>
+                ))}
+              </div>
+
+              <div className="maintenance-timeline">
+                {filteredEntries.map((log) => {
+                  const category = getCategoryById(log.type);
+                  const rawDate = log.timestamp || log.createdAt || log.date;
+                  const parsedDate = rawDate ? new Date(rawDate) : null;
+                  const displayDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? format(parsedDate, "MMM d, yyyy") : "Unknown Date";
+                  const displayOdometer = Number(log.performedAtODO ?? log.odometer ?? 0).toLocaleString();
+                  return (
+                    <button key={log.id} type="button" onClick={() => navigate(`/maintenance/edit/${log.id}`)}>
+                      <span className="maintenance-timeline-dot" />
+                      <span className="maintenance-log-icon" style={{ "--log-color": category?.color || "#14b8a6" }}>
+                        {renderServiceIcon(category)}
+                      </span>
+                      <span className="maintenance-log-copy">
+                        <strong>{translateCategoryName(category)}</strong>
+                        <small>{displayDate} - {displayOdometer} km</small>
+                        {log.notes && <small>{log.notes}</small>}
+                      </span>
+                      <span className="maintenance-log-meta">
+                        <strong>{log.cost != null ? `${Number(log.cost).toLocaleString()} ${t("currency")}` : ""}</strong>
+                        <em>Completed</em>
+                      </span>
+                      <CaretRight weight="bold" className={cn(isRtl && "rotate-180")} />
+                    </button>
+                  );
+                })}
+                {filteredEntries.length === 0 && (
+                  <div className="maintenance-empty-card">
+                    <ListChecks weight="duotone" />
+                    <strong>Untracked</strong>
+                    <p>Your service history will appear here after you add maintenance records.</p>
+                  </div>
+                )}
+                <button type="button" className="maintenance-add-row" onClick={() => navigate("/maintenance/add")}>
+                  <Plus weight="bold" />
+                  <span><strong>Add New Service Record</strong><small>Log a new maintenance or repair</small></span>
+                  <CaretRight weight="bold" className={cn(isRtl && "rotate-180")} />
+                </button>
+              </div>
+            </section>
+          </Motion.section>
+        )}
+
+        {activeTab === "__legacy_history" && (
           <Motion.div
             key="history"
             initial={{ opacity: 0, x: -10 }}
@@ -1048,6 +1366,62 @@ export default function Maintenance() {
         )}
 
         {activeTab === "settings" && (
+          <Motion.section
+            key="settings-premium"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            className="maintenance-stack"
+          >
+            <div className="maintenance-settings-head">
+              <button type="button" onClick={() => setActiveTab("overview")} aria-label={t("back")}>
+                <CaretLeft weight="bold" className={cn(isRtl && "rotate-180")} />
+              </button>
+              <div>
+                <h2>Custom Systems & Subcategories</h2>
+                <p>Organize your maintenance taxonomy</p>
+              </div>
+              <button type="button" onClick={handleAddSystem}><Plus weight="bold" /> Add System</button>
+            </div>
+
+            <section className="maintenance-taxonomy-panel">
+              <div className="maintenance-section-head compact">
+                <h2>Systems / Categories</h2>
+                <span>Drag to reorder</span>
+              </div>
+              <div className="maintenance-system-list">
+                {activeMaintenanceSystems.map((system) => {
+                  const Icon = ICON_MAP[system.icon] || Wrench;
+                  const count = system.categories.filter((catId) => getCategoryById(catId)).length;
+                  return (
+                    <div key={system.id} className="maintenance-system-row">
+                      <button type="button" onClick={() => setSelectedSystemId(system.id)}>
+                        <Icon weight="duotone" />
+                        <strong>{translateSystemName(system.name)}</strong>
+                        <em>{count}</em>
+                      </button>
+                      <button type="button" onClick={() => {
+                        setEditingSystemId(system.id);
+                        setEditSystemName(system.name);
+                        setEditSystemIcon(system.icon || "Wrench");
+                      }} aria-label="Edit system"><Pencil weight="duotone" /></button>
+                      <button type="button" onClick={() => {
+                        setEditingSystemId(system.id);
+                        setEditSystemName(system.name);
+                        setEditSystemIcon(system.icon || "Wrench");
+                      }} aria-label="Add subcategory"><Plus weight="bold" /></button>
+                      <button type="button" className="danger" onClick={() => setConfirmDeleteSystem(system.id)} aria-label="Delete system"><Trash weight="duotone" /></button>
+                      <DotsThreeVertical weight="bold" />
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+          </Motion.section>
+        )}
+
+        {activeTab === "__legacy_settings" && (
           <Motion.div
             key="settings"
             initial={{ opacity: 0, x: 10 }}
@@ -1486,6 +1860,80 @@ export default function Maintenance() {
               )}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={remindersOpen}
+        onClose={() => setRemindersOpen(false)}
+        title=""
+        showCloseButton={false}
+        size="lg"
+      >
+        <div className="maintenance-reminder-sheet">
+          <div className="maintenance-sheet-handle" />
+          <div className="maintenance-reminder-head">
+            <span><Bell weight="duotone" /></span>
+            <div>
+              <h2>Maintenance Reminders</h2>
+              <p>Stay on top of your car's maintenance</p>
+            </div>
+            <button type="button" onClick={() => setRemindersOpen(false)} aria-label={t("close")}>
+              <X weight="bold" />
+            </button>
+          </div>
+
+          <section className="maintenance-reminder-section">
+            <h3>Maintenance Notifications</h3>
+            <div className="maintenance-reminder-row">
+              <span><Bell weight="duotone" /></span>
+              <div><strong>Enable Maintenance Reminders</strong><small>Get notified about upcoming maintenance</small></div>
+              <button type="button" className={cn("maintenance-toggle", notificationsEnabled && "on")} onClick={toggleNotifications}>
+                <i />
+              </button>
+            </div>
+            {[
+              [<Clock key="clock" weight="duotone" />, "Due Soon Reminder", "Notify me before maintenance is due", "7 days before"],
+              [<Warning key="warning" weight="duotone" />, "Overdue Reminder", "Notify me when maintenance is overdue", "Every 3 days"],
+              [<CalendarBlank key="calendar" weight="duotone" />, "Date-based Reminders", "Based on calendar schedule", ""],
+              [<Pulse key="pulse" weight="duotone" />, "Odometer-based Reminders", "Based on distance driven", ""],
+            ].map(([icon, title, subtitle, value]) => (
+              <div key={title} className="maintenance-reminder-row muted">
+                <span>{icon}</span>
+                <div><strong>{title}</strong><small>{subtitle}</small></div>
+                {value && <em>{value}</em>}
+                <button type="button" className={cn("maintenance-toggle", notificationsEnabled && "on")} disabled>
+                  <i />
+                </button>
+              </div>
+            ))}
+          </section>
+
+          <section className="maintenance-reminder-section">
+            <h3>Notification Permissions</h3>
+            <div className="maintenance-permission-card">
+              <Shield weight="duotone" />
+              <div>
+                <strong>
+                  {!isNotificationSupported
+                    ? "Notifications unsupported"
+                    : permissionState === "granted"
+                      ? "Permission granted"
+                      : "Permission needed"}
+                </strong>
+                <small>
+                  {permissionState === "granted"
+                    ? "You'll receive maintenance reminders as push notifications."
+                    : "Turn on notifications to receive due-soon and overdue alerts."}
+                </small>
+              </div>
+              <button type="button" onClick={toggleNotifications}>Manage</button>
+            </div>
+          </section>
+
+          <button type="button" className="maintenance-sheet-save" onClick={() => setRemindersOpen(false)}>
+            <FloppyDisk weight="duotone" /> Save Settings
+          </button>
         </div>
       </Modal>
 

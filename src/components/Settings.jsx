@@ -385,9 +385,8 @@ export default function Settings() {
     deleteVehicle,
     activeVehicle,
   } = useFuel();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, textSize, setTextSize } = useTheme();
   const { t, i18n } = useTranslation();
-  const isRtl = i18n.language.startsWith("ar");
 
   const [newVehicleName, setNewVehicleName] = useState("");
   const [editingVehicleId, setEditingVehicleId] = useState(null);
@@ -1239,6 +1238,9 @@ export default function Settings() {
   };
 
   const currentLanguage = i18n.language.startsWith("ar") ? "ar" : "en";
+  const selectedTextSize = ["compact", "default", "large"].includes(textSize)
+    ? textSize
+    : "default";
   const cloudRestoreResultsList = getCloudRestoreResultsList();
   const cloudRestoreResultCount = cloudRestoreResultsList.length;
   const cloudRestoreSelectedCount = cloudRestoreSelected.length;
@@ -1861,6 +1863,38 @@ export default function Settings() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="settings-panel-card">
+            <div className="settings-section-title-row flat">
+              <div>
+                <span className="settings-section-kicker">Display</span>
+                <h3>Text Size</h3>
+              </div>
+              <Ruler size={18} weight="duotone" />
+            </div>
+            <div className="settings-segmented-control">
+              {[
+                { id: "compact", label: "Compact" },
+                { id: "default", label: "Default" },
+                { id: "large", label: "Large" },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={cn("settings-segment", selectedTextSize === option.id && "is-active")}
+                  onClick={() => {
+                    setTextSize(option.id);
+                    showToast(t("updated") || "Updated");
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <p className="settings-panel-note">
+              Adjusts app typography for denser screens or easier reading.
+            </p>
           </div>
 
           <div className="settings-panel-card">

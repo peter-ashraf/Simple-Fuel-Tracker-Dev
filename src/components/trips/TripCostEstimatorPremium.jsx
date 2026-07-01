@@ -17,14 +17,12 @@ import {
   RoadHorizon,
   Trash,
   WarningCircle,
-  Wrench,
 } from "@phosphor-icons/react";
 // eslint-disable-next-line no-unused-vars
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Input, Modal, cn } from "../ui";
-import { VehicleArt } from "../PremiumUI";
 import { useFuel } from "../../hooks/useFuelContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import {
@@ -32,11 +30,6 @@ import {
   convertDistance,
 } from "../../utils/tripEstimator";
 import { formatEfficiency2Dec } from "../../utils/formatting";
-import {
-  getDefaultVehicleImage,
-  resolveVehicleImage,
-  scaleVehicleHeroImageSettings,
-} from "../../utils/vehicleImageResolver";
 import "../tools/ToolScreen.css";
 import "./TripCostEstimator.css";
 
@@ -49,24 +42,10 @@ const getConfidenceTone = (confidence) => {
   return "muted";
 };
 
-const getVehicleSubtitle = (vehicle) => {
-  const engine = vehicle?.engine || vehicle?.model || vehicle?.trim;
-  const fuel = vehicle?.fuelType || vehicle?.fuel_type || vehicle?.type;
-  return [engine, fuel].filter(Boolean).join(" / ") || "Active vehicle";
-};
-
-const getVehiclePlate = (vehicle) =>
-  vehicle?.plateNumber ||
-  vehicle?.plate_number ||
-  vehicle?.registration ||
-  vehicle?.licensePlate ||
-  vehicle?.license_plate ||
-  "";
-
-const ToggleRow = ({ icon: Icon, title, subtitle, checked, onChange }) => (
+const ToggleRow = ({ icon: RowIcon, title, subtitle, checked, onChange }) => (
   <div className="tool-option-row">
     <span className="tool-option-icon">
-      <Icon weight="duotone" />
+      <RowIcon weight="duotone" />
     </span>
     <span className="tool-option-copy">
       <span>{title}</span>
@@ -220,7 +199,6 @@ const EstimateDetails = ({ data, isModal = false, t }) => (
 
 export default function TripCostEstimatorPremium() {
   const {
-    activeVehicle,
     activeVehicleFillUpsByOdometer,
     addTripEstimate,
     tripEstimates,
@@ -245,25 +223,7 @@ export default function TripCostEstimatorPremium() {
   );
   const [isSampleSizeDropdownOpen, setIsSampleSizeDropdownOpen] = useState(false);
   const sampleSizeDropdownRef = useRef(null);
-  const toolsDropdownRef = useRef(null);
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState(null);
-  const [vehicleImage, setVehicleImage] = useState({
-    src: getDefaultVehicleImage(),
-    settings: {},
-  });
-
-  useEffect(() => {
-    let isMounted = true;
-
-    resolveVehicleImage(activeVehicle).then((resolved) => {
-      if (isMounted) setVehicleImage(resolved);
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeVehicle]);
 
   const estimate = useMemo(() => {
     if (!tripDistance || parseFloat(tripDistance) <= 0) return null;
@@ -312,19 +272,11 @@ export default function TripCostEstimatorPremium() {
       ) {
         setIsSampleSizeDropdownOpen(false);
       }
-      if (
-        toolsDropdownRef.current &&
-        !toolsDropdownRef.current.contains(event.target)
-      ) {
-        setIsToolsOpen(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const heroSettings = scaleVehicleHeroImageSettings(vehicleImage.settings);
-  const vehiclePlate = getVehiclePlate(activeVehicle);
   const sampleLabel =
     sampleSize === "total" ? "All records" : `Last ${sampleSize} records`;
 
@@ -332,18 +284,7 @@ export default function TripCostEstimatorPremium() {
     <>
       {createPortal(
         <div className="tool-action-bar">
-          <div className="tool-action-inner">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="tool-action-button tool-action-secondary"
-            >
-              <CaretLeft
-                weight="bold"
-                className={cn("tool-action-icon", isRtl && "rotate-180")}
-              />
-              <span>{t("back")}</span>
-            </button>
+          <div className="tool-action-inner trip-action-inner">
             <button
               type="button"
               onClick={() => estimate && addTripEstimate(estimate)}
@@ -360,78 +301,20 @@ export default function TripCostEstimatorPremium() {
 
       <main className="tool-screen trip-tool-screen">
         <div className="tool-content">
-          <header className="trip-vehicle-banner tool-glass-panel">
-            <VehicleArt
-              className="tool-vehicle-art trip-banner-art"
-              src={vehicleImage.src}
-              fallbackSrcs={[getDefaultVehicleImage()]}
-              alt={`${activeVehicle?.name || "Vehicle"} image`}
-              imageOffsetX={heroSettings.offsetX}
-              imageOffsetY={heroSettings.offsetY}
-              imageZoom={heroSettings.zoom}
-              imageRotate={heroSettings.rotate}
-              imageFlipX={heroSettings.flipX}
-              imageFlipY={heroSettings.flipY}
-            />
-            <div className="trip-vehicle-copy">
-              <div>
-                <h2>{activeVehicle?.name || t("select_vehicle")}</h2>
-                <span className="tool-status-dot">Active</span>
-              </div>
-              <p>{vehiclePlate || getVehicleSubtitle(activeVehicle)}</p>
-            </div>
-            <div className="tool-tools-wrap" ref={toolsDropdownRef}>
-              <button
-                type="button"
-                className="tool-pill-button tool-tools-trigger"
-                onClick={() => setIsToolsOpen((value) => !value)}
-                aria-haspopup="menu"
-                aria-expanded={isToolsOpen}
-              >
-                <Wrench weight="duotone" />
-                <span>Tools</span>
-                <CaretDown weight="bold" className={cn("tool-select-caret", isToolsOpen && "is-open")} />
-              </button>
-              <AnimatePresence>
-                {isToolsOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                    transition={{ type: "spring", stiffness: 340, damping: 26 }}
-                    className="tool-tools-menu"
-                    role="menu"
-                  >
-                    <button type="button" className="tool-tools-menu-item is-active" role="menuitem" onClick={() => setIsToolsOpen(false)}>
-                      <Gauge weight="duotone" />
-                      <span>Trip Estimator</span>
-                      <Check weight="bold" />
-                    </button>
-                    <button type="button" className="tool-tools-menu-item" role="menuitem" onClick={() => { setIsToolsOpen(false); navigate("/tyre-calculator"); }}>
-                      <RoadHorizon weight="duotone" />
-                      <span>Tire Comparison</span>
-                      <CaretLeft weight="bold" className="tool-menu-next" />
-                    </button>
-                    <button type="button" className="tool-tools-menu-item" role="menuitem" onClick={() => { setIsToolsOpen(false); navigate("/maintenance"); }}>
-                      <Wrench weight="duotone" />
-                      <span>Maintenance</span>
-                      <CaretLeft weight="bold" className="tool-menu-next" />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </header>
-
-          <section className="tool-hero-title">
+          <header className="trip-topbar">
+            <button
+              type="button"
+              className="trip-icon-button"
+              onClick={() => navigate("/")}
+              aria-label={t("back")}
+            >
+              <CaretLeft weight="bold" className={cn(isRtl && "rotate-180")} />
+            </button>
             <div>
               <h1>{t("trip_estimator")}</h1>
               <p>{t("estimate_trip_subtitle")}</p>
             </div>
-            <div className="trip-map-mark" aria-hidden="true">
-              <MapPin weight="duotone" />
-            </div>
-          </section>
+          </header>
 
           <section className="tool-card trip-overview-card">
             <div className="tool-section-heading">
